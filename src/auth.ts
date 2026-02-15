@@ -1,10 +1,18 @@
-import { getUserByGoogleId, createUser, updateUserLogin, createSession, validateSession } from "./db";
+import {
+  getUserByGoogleId,
+  createUser,
+  updateUserLogin,
+  createSession,
+  validateSession,
+} from "./db";
 import type { User } from "./types";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI!;
-const ALLOWED_EMAILS = process.env.ALLOWED_EMAILS!.split(",").map(e => e.trim());
+const ALLOWED_EMAILS = process.env
+  .ALLOWED_EMAILS!.split(",")
+  .map((e) => e.trim());
 const SESSION_SECRET = process.env.SESSION_SECRET!;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
@@ -33,7 +41,7 @@ interface GoogleTokenResponse {
 }
 
 interface GoogleUserInfo {
-  sub: string;
+  id: string;
   email: string;
   name: string;
   picture: string;
@@ -63,12 +71,17 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
   return data.access_token;
 }
 
-export async function getGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
-  const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
+export async function getGoogleUserInfo(
+  accessToken: string,
+): Promise<GoogleUserInfo> {
+  const response = await fetch(
+    "https://www.googleapis.com/oauth2/v2/userinfo",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     throw new Error("Failed to get user info from Google");
@@ -78,7 +91,10 @@ export async function getGoogleUserInfo(accessToken: string): Promise<GoogleUser
 }
 
 export function createOrUpdateUser(userInfo: GoogleUserInfo): User {
-  let user = getUserByGoogleId(userInfo.sub);
+  let user = getUserByGoogleId(userInfo.id);
+
+  console.log(`Got user with info ${user}`);
+  console.log(`Original user info is ${JSON.stringify(userInfo)}`);
 
   if (user) {
     updateUserLogin(user.id);
@@ -86,7 +102,12 @@ export function createOrUpdateUser(userInfo: GoogleUserInfo): User {
   }
 
   // Create new user
-  user = createUser(userInfo.sub, userInfo.email, userInfo.name, userInfo.picture);
+  user = createUser(
+    userInfo.id,
+    userInfo.email,
+    userInfo.name,
+    userInfo.picture,
+  );
   return user;
 }
 
@@ -95,10 +116,10 @@ export function getUserFromSession(req: Request): User | null {
   if (!cookieHeader) return null;
 
   const cookies = Object.fromEntries(
-    cookieHeader.split("; ").map(c => {
+    cookieHeader.split("; ").map((c) => {
       const [key, ...values] = c.split("=");
       return [key, values.join("=")];
-    })
+    }),
   );
 
   const sessionId = cookies.session;
