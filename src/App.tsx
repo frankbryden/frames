@@ -28,8 +28,8 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <div className="text-zinc-400 font-light">Loading...</div>
       </div>
     );
   }
@@ -39,9 +39,9 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-zinc-950">
       <Header user={user} view={view} setView={setView} />
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="container mx-auto px-6 py-8 max-w-7xl">
         {view === "feed" && <UserFeed user={user} />}
         {view === "timeline" && <Timeline user={user} />}
         {view === "upload" && <UploadForm onUploadComplete={() => setView("timeline")} />}

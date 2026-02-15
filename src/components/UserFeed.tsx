@@ -44,12 +44,12 @@ export function UserFeed({ user }: UserFeedProps) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Feed</h2>
+      <h2 className="text-2xl font-light tracking-tight text-zinc-100 mb-8">Feed</h2>
 
       {loading && pictures.length === 0 ? (
-        <div className="text-center py-12 text-gray-600">Loading...</div>
+        <div className="text-center py-20 text-zinc-500 font-light">Loading...</div>
       ) : pictures.length === 0 ? (
-        <div className="text-center py-12 text-gray-600">
+        <div className="text-center py-20 text-zinc-500 font-light">
           No pictures yet. Upload your first photo!
         </div>
       ) : (
@@ -66,11 +66,11 @@ export function UserFeed({ user }: UserFeedProps) {
           </div>
 
           {hasMore && (
-            <div className="text-center mt-8">
+            <div className="text-center mt-10">
               <button
                 onClick={() => loadPictures(false)}
                 disabled={loading}
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                className="px-6 py-2 bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg hover:bg-zinc-750 hover:border-zinc-600 disabled:opacity-50 font-light transition-all"
               >
                 {loading ? "Loading..." : "Load More"}
               </button>

@@ -18,18 +18,18 @@ export function Header({ user, view, setView }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="container mx-auto px-4 py-4 max-w-6xl">
+    <header className="bg-zinc-900 border-b border-zinc-800">
+      <div className="container mx-auto px-6 py-5 max-w-7xl">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Photo Share</h1>
+          <h1 className="text-2xl font-light tracking-tight text-zinc-50">Frames</h1>
 
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-2">
             <button
               onClick={() => setView("feed")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
                 view === "feed"
-                  ? "bg-blue-500 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
               }`}
             >
               Feed
@@ -37,38 +37,38 @@ export function Header({ user, view, setView }: HeaderProps) {
 
             <button
               onClick={() => setView("timeline")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
                 view === "timeline"
-                  ? "bg-blue-500 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
               }`}
             >
-              My Timeline
+              Timeline
             </button>
 
             <button
               onClick={() => setView("upload")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
                 view === "upload"
-                  ? "bg-blue-500 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
               }`}
             >
               Upload
             </button>
 
-            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-200">
+            <div className="flex items-center gap-3 ml-6 pl-6 border-l border-zinc-800">
               {user.avatar_url && (
                 <img
                   src={user.avatar_url}
                   alt={user.name}
-                  className="w-8 h-8 rounded-full"
+                  className="w-8 h-8 rounded-full ring-1 ring-zinc-700"
                 />
               )}
-              <span className="text-sm text-gray-700">{user.name}</span>
+              <span className="text-sm text-zinc-300 font-light">{user.name}</span>
               <button
                 onClick={handleLogout}
-                className="text-sm text-gray-500 hover:text-gray-700"
+                className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"
               >
                 Logout
               </button>

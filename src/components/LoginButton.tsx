@@ -6,14 +6,14 @@ export function LoginButton() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Photo Share</h1>
-        <p className="text-gray-600 mb-8">Share and discover amazing photos</p>
+    <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+      <div className="bg-zinc-900 border border-zinc-800 p-10 rounded-xl max-w-md w-full mx-4">
+        <h1 className="text-4xl font-light tracking-tight text-zinc-50 mb-2">Frames</h1>
+        <p className="text-zinc-400 font-light mb-10">Your minimalist photo gallery</p>
 
         <button
           onClick={handleLogin}
-          className="w-full bg-white border-2 border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-3"
+          className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 font-medium py-3 px-4 rounded-lg hover:bg-zinc-750 hover:border-zinc-600 transition-all flex items-center justify-center gap-3"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -36,8 +36,8 @@ export function LoginButton() {
           Sign in with Google
         </button>
 
-        <p className="text-sm text-gray-500 text-center mt-4">
-          Access is restricted to whitelisted emails only
+        <p className="text-xs text-zinc-500 text-center mt-6 font-light">
+          Access restricted to authorized users
         </p>
       </div>
     </div>

@@ -60,27 +60,27 @@ export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden hover:border-zinc-700 transition-colors">
         <img
           src={picture.thumbnail_url || ""}
           alt={picture.description || "Photo"}
-          className="w-full h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+          className="w-full h-64 object-cover cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => setShowFullSize(true)}
           loading="lazy"
         />
 
         <div className="p-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-light text-zinc-200">
               {(picture as any).user_name || "Unknown"}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-zinc-500 font-light">
               {new Date(picture.uploaded_at).toLocaleDateString()}
             </span>
           </div>
 
           {picture.description && (
-            <p className="text-gray-700 text-sm mb-3">{picture.description}</p>
+            <p className="text-zinc-400 text-sm font-light mb-3">{picture.description}</p>
           )}
 
           {picture.tags && picture.tags.length > 0 && (
@@ -88,7 +88,7 @@ export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps
               {picture.tags.map(tag => (
                 <span
                   key={tag.id}
-                  className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                  className="px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded border border-zinc-700 font-light"
                 >
                   {tag.name}
                 </span>
@@ -102,22 +102,22 @@ export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps
                 onClick={() => handleLike(true)}
                 className={`flex items-center gap-1 transition-colors ${
                   localUserLike === true
-                    ? "text-blue-500"
-                    : "text-gray-500 hover:text-blue-500"
+                    ? "text-zinc-100"
+                    : "text-zinc-600 hover:text-zinc-300"
                 }`}
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
                 </svg>
-                <span className="text-sm">{localLikeCount}</span>
+                <span className="text-sm font-light">{localLikeCount}</span>
               </button>
 
               <button
                 onClick={() => handleLike(false)}
                 className={`flex items-center gap-1 transition-colors ${
                   localUserLike === false
-                    ? "text-red-500"
-                    : "text-gray-500 hover:text-red-500"
+                    ? "text-zinc-100"
+                    : "text-zinc-600 hover:text-zinc-300"
                 }`}
               >
                 <svg
@@ -128,14 +128,14 @@ export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps
                 >
                   <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
                 </svg>
-                <span className="text-sm">{localDislikeCount}</span>
+                <span className="text-sm font-light">{localDislikeCount}</span>
               </button>
             </div>
 
             {isOwner && (
               <button
                 onClick={handleDelete}
-                className="text-sm text-red-500 hover:text-red-700"
+                className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"
               >
                 Delete
               </button>
@@ -146,7 +146,7 @@ export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps
 
       {showFullSize && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowFullSize(false)}
         >
           <img
@@ -157,7 +157,7 @@ export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps
           />
           <button
             onClick={() => setShowFullSize(false)}
-            className="absolute top-4 right-4 text-white text-4xl hover:text-gray-300"
+            className="absolute top-6 right-6 text-zinc-400 text-4xl hover:text-zinc-200 transition-colors"
           >
             ×
           </button>

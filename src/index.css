@@ -8,10 +8,34 @@
   }
 
   body {
-    @apply font-sans bg-gray-50 text-gray-900;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    @apply bg-zinc-950 text-zinc-100 antialiased;
   }
 
   #root {
     @apply min-h-screen;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-zinc-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-700 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-600;
   }
 }

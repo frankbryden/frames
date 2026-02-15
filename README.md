@@ -1,12 +1,13 @@
-# Photo Share
+# Frames
 
-A picture-sharing web application with Cloudflare R2 storage, Google OAuth authentication, and automated Docker deployment.
+A minimalist, dark-themed picture gallery with Cloudflare R2 storage, Google OAuth authentication, and automated Docker deployment.
 
 ## Features
 
+- Clean, minimalist dark interface with Inter font
 - Upload and share pictures with descriptions and tags
 - Timeline view (chronological) of your pictures
-- Home feed (reverse chronological) of all users' pictures
+- Feed view (reverse chronological) of all users' pictures
 - Tag filtering and search
 - Like/dislike functionality
 - Image compression (original, compressed, thumbnail)
