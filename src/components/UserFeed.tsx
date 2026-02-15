@@ -44,8 +44,6 @@ export function UserFeed({ user }: UserFeedProps) {
 
   return (
     <div>
-      <h2 className="text-2xl font-light tracking-tight text-zinc-100 mb-8">Feed</h2>
-
       {loading && pictures.length === 0 ? (
         <div className="text-center py-20 text-zinc-500 font-light">Loading...</div>
       ) : pictures.length === 0 ? (

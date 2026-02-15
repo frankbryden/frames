@@ -82,8 +82,6 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-light tracking-tight text-zinc-100 mb-8">Upload</h2>
-
       <form onSubmit={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-lg p-8">
         {/* File input */}
         <div className="mb-6">
