@@ -3,3 +3,6 @@ peer = true
 
 [test]
 preload = ["./src/db.ts"]
+
+[serve.static]
+plugins = ["bun-plugin-tailwind"]
