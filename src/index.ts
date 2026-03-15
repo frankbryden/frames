@@ -31,7 +31,15 @@ import {
   cleanupExpiredSessions,
   getUserById,
   getUserCameras,
+  storeGoogleTokens,
 } from "./db";
+import {
+  getValidToken,
+  listAlbums,
+  listMediaItems,
+  batchGetMediaItems,
+  downloadMediaItem,
+} from "./google-photos";
 import { compressImage, validateImageFile } from "./compression";
 import {
   uploadToR2,
@@ -120,11 +128,11 @@ const server = serve({
         }
 
         try {
-          // Exchange code for token
-          const accessToken = await exchangeCodeForToken(code);
+          // Exchange code for tokens
+          const tokens = await exchangeCodeForToken(code);
 
           // Get user info from Google
-          const userInfo = await getGoogleUserInfo(accessToken);
+          const userInfo = await getGoogleUserInfo(tokens.accessToken);
 
           // Check email whitelist
           if (!isEmailAllowed(userInfo.email)) {
@@ -136,6 +144,9 @@ const server = serve({
 
           // Create or update user
           const user = createOrUpdateUser(userInfo);
+
+          // Store Google tokens for Photos API access
+          storeGoogleTokens(user.id, tokens.accessToken, tokens.refreshToken, tokens.expiresAt);
 
           // Create session
           const sessionId = createSession(user.id);
@@ -704,6 +715,118 @@ const server = serve({
             return new Response("Unauthorized", { status: 401 });
           }
           return new Response("Failed to fetch user", { status: 500 });
+        }
+      },
+    },
+
+    // Google Photos import
+    "/api/google-photos/albums": {
+      async GET(req) {
+        try {
+          const user = requireAuth(req);
+          const accessToken = await getValidToken(user.id);
+          const albums = await listAlbums(accessToken);
+          return Response.json(albums);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          const msg = error instanceof Error ? error.message : "Failed to fetch albums";
+          return new Response(msg, { status: 500 });
+        }
+      },
+    },
+
+    "/api/google-photos/media": {
+      async GET(req) {
+        try {
+          const user = requireAuth(req);
+          const url = new URL(req.url);
+          const albumId = url.searchParams.get("albumId") ?? undefined;
+          const pageToken = url.searchParams.get("pageToken") ?? undefined;
+
+          const accessToken = await getValidToken(user.id);
+          const result = await listMediaItems(accessToken, albumId, pageToken);
+          return Response.json(result);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          const msg = error instanceof Error ? error.message : "Failed to fetch media";
+          return new Response(msg, { status: 500 });
+        }
+      },
+    },
+
+    "/api/google-photos/import": {
+      async POST(req) {
+        try {
+          const user = requireAuth(req);
+          const body = await req.json() as { mediaItemIds: string[]; description?: string };
+          const { mediaItemIds, description } = body;
+
+          if (!Array.isArray(mediaItemIds) || mediaItemIds.length === 0) {
+            return new Response("mediaItemIds required", { status: 400 });
+          }
+
+          const accessToken = await getValidToken(user.id);
+
+          // Fetch fresh media item details (baseUrl expires quickly)
+          const mediaItems = await batchGetMediaItems(accessToken, mediaItemIds);
+
+          const imported: number[] = [];
+
+          for (const item of mediaItems) {
+            // Only import images
+            if (!item.mimeType.startsWith("image/")) continue;
+
+            const fileBuffer = await downloadMediaItem(item.baseUrl);
+
+            const { original, compressed, thumbnail, metadata } = await compressImage(fileBuffer);
+
+            const originalKey = generatePictureKey(user.id, item.filename, "original");
+            const compressedKey = generatePictureKey(user.id, item.filename, "compressed");
+            const thumbnailKey = generatePictureKey(user.id, item.filename, "thumbnail");
+
+            await Promise.all([
+              uploadToR2(originalKey, original, item.mimeType),
+              uploadToR2(compressedKey, compressed, "image/jpeg"),
+              uploadToR2(thumbnailKey, thumbnail, "image/webp"),
+            ]);
+
+            // Use Google Photos EXIF data as fallback when EXIF is stripped
+            const photoMeta = item.mediaMetadata.photo;
+            const picture = uploadPicture({
+              userId: user.id,
+              originalKey,
+              compressedKey,
+              thumbnailKey,
+              originalFilename: item.filename,
+              originalSize: metadata.originalSize,
+              compressedSize: metadata.compressedSize,
+              width: metadata.width,
+              height: metadata.height,
+              mimeType: item.mimeType,
+              description: description || undefined,
+              cameraMake: metadata.cameraInfo.cameraMake ?? photoMeta?.cameraMake ?? null,
+              cameraModel: metadata.cameraInfo.cameraModel ?? photoMeta?.cameraModel ?? null,
+              lensModel: metadata.cameraInfo.lensModel,
+              fNumber: metadata.cameraInfo.fNumber ?? photoMeta?.apertureFNumber ?? null,
+              exposureTime: metadata.cameraInfo.exposureTime ?? photoMeta?.exposureTime ?? null,
+              iso: metadata.cameraInfo.iso ?? photoMeta?.isoEquivalent ?? null,
+              focalLength: metadata.cameraInfo.focalLength ?? photoMeta?.focalLength ?? null,
+            });
+
+            imported.push(picture.id);
+          }
+
+          return Response.json({ imported: imported.length, ids: imported });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          const msg = error instanceof Error ? error.message : "Import failed";
+          return new Response(msg, { status: 500 });
         }
       },
     },

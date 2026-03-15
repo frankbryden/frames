@@ -58,6 +58,17 @@ export function Header({ user, view, setView, onProfileClick }: HeaderProps) {
               Upload
             </button>
 
+            <button
+              onClick={() => setView("import")}
+              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
+                view === "import"
+                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+              }`}
+            >
+              Import
+            </button>
+
             <div className="flex items-center gap-3 ml-6 pl-6 border-l border-zinc-800">
               <button
                 onClick={onProfileClick}

@@ -5,9 +5,10 @@ import { UserFeed } from "./components/UserFeed";
 import { Timeline } from "./components/Timeline";
 import { UploadForm } from "./components/UploadForm";
 import { UserProfile } from "./components/UserProfile";
+import { GooglePhotosImport } from "./components/GooglePhotosImport";
 import type { User } from "./types";
 
-export type View = "feed" | "timeline" | "upload" | "profile";
+export type View = "feed" | "timeline" | "upload" | "profile" | "import";
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -57,6 +58,7 @@ export function App() {
         {view === "feed" && <UserFeed user={user} onUserClick={handleUserClick} />}
         {view === "timeline" && <Timeline user={user} onUserClick={handleUserClick} />}
         {view === "upload" && <UploadForm onUploadComplete={() => setView("timeline")} />}
+        {view === "import" && <GooglePhotosImport onImportComplete={() => setView("timeline")} />}
         {view === "profile" && profileUserId !== null && (
           <UserProfile userId={profileUserId} currentUser={user} onBack={() => setView("feed")} />
         )}

@@ -60,6 +60,16 @@ for (const sql of exifColumns) {
   try { db.exec(sql); } catch { /* column already exists */ }
 }
 
+// Google Photos token migration — idempotent
+const tokenColumns = [
+  "ALTER TABLE users ADD COLUMN google_access_token TEXT",
+  "ALTER TABLE users ADD COLUMN google_refresh_token TEXT",
+  "ALTER TABLE users ADD COLUMN google_token_expires_at DATETIME",
+];
+for (const sql of tokenColumns) {
+  try { db.exec(sql); } catch { /* column already exists */ }
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,6 +144,25 @@ export function createUser(googleId: string, email: string, name: string, avatar
 export function updateUserLogin(userId: number): void {
   const stmt = db.prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?");
   stmt.run(userId);
+}
+
+export function storeGoogleTokens(
+  userId: number,
+  accessToken: string,
+  refreshToken: string | null,
+  expiresAt: Date,
+): void {
+  const stmt = db.prepare(
+    "UPDATE users SET google_access_token = ?, google_refresh_token = COALESCE(?, google_refresh_token), google_token_expires_at = ? WHERE id = ?"
+  );
+  stmt.run(accessToken, refreshToken, expiresAt.toISOString(), userId);
+}
+
+export function getGoogleTokens(userId: number): { google_access_token: string | null; google_refresh_token: string | null; google_token_expires_at: string | null } | null {
+  const stmt = db.prepare(
+    "SELECT google_access_token, google_refresh_token, google_token_expires_at FROM users WHERE id = ?"
+  );
+  return stmt.get(userId) as { google_access_token: string | null; google_refresh_token: string | null; google_token_expires_at: string | null } | null;
 }
 
 // Session functions

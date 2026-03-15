@@ -25,7 +25,9 @@ export function generateGoogleAuthUrl(state: string): string {
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: GOOGLE_REDIRECT_URI,
     response_type: "code",
-    scope: "openid email profile",
+    scope: "openid email profile https://www.googleapis.com/auth/photoslibrary.readonly",
+    access_type: "offline",
+    prompt: "consent",
     state,
   });
 
@@ -34,10 +36,17 @@ export function generateGoogleAuthUrl(state: string): string {
 
 interface GoogleTokenResponse {
   access_token: string;
+  refresh_token?: string;
   expires_in: number;
   token_type: string;
   scope: string;
   id_token: string;
+}
+
+export interface GoogleTokens {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: Date;
 }
 
 interface GoogleUserInfo {
@@ -48,7 +57,7 @@ interface GoogleUserInfo {
   email_verified: boolean;
 }
 
-export async function exchangeCodeForToken(code: string): Promise<string> {
+export async function exchangeCodeForToken(code: string): Promise<GoogleTokens> {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: {
@@ -68,7 +77,12 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
   }
 
   const data = (await response.json()) as GoogleTokenResponse;
-  return data.access_token;
+  const expiresAt = new Date(Date.now() + data.expires_in * 1000);
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token ?? null,
+    expiresAt,
+  };
 }
 
 export async function getGoogleUserInfo(
