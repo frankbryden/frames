@@ -31,7 +31,12 @@ import {
   cleanupExpiredSessions,
 } from "./db";
 import { compressImage, validateImageFile } from "./compression";
-import { uploadToR2, getSignedUrl, generatePictureKey, deleteFromR2 } from "./r2";
+import {
+  uploadToR2,
+  getSignedUrl,
+  generatePictureKey,
+  deleteFromR2,
+} from "./r2";
 import { backupDatabase, startBackupScheduler } from "./backup";
 import type { User, Picture } from "./types";
 
@@ -41,9 +46,12 @@ const PORT = parseInt(process.env.PORT || "3000");
 startBackupScheduler();
 
 // Cleanup expired sessions daily
-setInterval(() => {
-  cleanupExpiredSessions();
-}, 24 * 60 * 60 * 1000);
+setInterval(
+  () => {
+    cleanupExpiredSessions();
+  },
+  24 * 60 * 60 * 1000,
+);
 
 // Helper to require authentication
 function requireAuth(req: Request): User {
@@ -62,7 +70,10 @@ const server = serve({
     // Health check
     "/api/health": {
       async GET() {
-        return Response.json({ status: "ok", timestamp: new Date().toISOString() });
+        return Response.json({
+          status: "ok",
+          timestamp: new Date().toISOString(),
+        });
       },
     },
 
@@ -96,7 +107,9 @@ const server = serve({
         // Verify state (CSRF protection)
         const cookieHeader = req.headers.get("Cookie");
         const cookies = cookieHeader
-          ? Object.fromEntries(cookieHeader.split("; ").map(c => c.split("=")))
+          ? Object.fromEntries(
+              cookieHeader.split("; ").map((c) => c.split("=")),
+            )
           : {};
         const savedState = cookies.oauth_state;
 
@@ -115,7 +128,7 @@ const server = serve({
           if (!isEmailAllowed(userInfo.email)) {
             return new Response(
               `Access denied. Email ${userInfo.email} is not whitelisted.`,
-              { status: 403 }
+              { status: 403 },
             );
           }
 
@@ -146,7 +159,9 @@ const server = serve({
         if (user) {
           const cookieHeader = req.headers.get("Cookie");
           const cookies = cookieHeader
-            ? Object.fromEntries(cookieHeader.split("; ").map(c => c.split("=")))
+            ? Object.fromEntries(
+                cookieHeader.split("; ").map((c) => c.split("=")),
+              )
             : {};
           const sessionId = cookies.session;
           if (sessionId) {
@@ -166,6 +181,10 @@ const server = serve({
     "/api/me": {
       async GET(req) {
         const user = getUserFromSession(req);
+        console.log("MEEE");
+        uploadToR2("fr-test", Buffer.from("hey"), "text/plain").then((res) =>
+          console.log(res),
+        );
         if (!user) {
           return new Response("Unauthorized", { status: 401 });
         }
@@ -196,12 +215,25 @@ const server = serve({
           const fileBuffer = Buffer.from(await file.arrayBuffer());
 
           // Compress image
-          const { original, compressed, thumbnail, metadata } = await compressImage(fileBuffer);
+          const { original, compressed, thumbnail, metadata } =
+            await compressImage(fileBuffer);
 
           // Generate R2 keys
-          const originalKey = generatePictureKey(user.id, file.name, "original");
-          const compressedKey = generatePictureKey(user.id, file.name, "compressed");
-          const thumbnailKey = generatePictureKey(user.id, file.name, "thumbnail");
+          const originalKey = generatePictureKey(
+            user.id,
+            file.name,
+            "original",
+          );
+          const compressedKey = generatePictureKey(
+            user.id,
+            file.name,
+            "compressed",
+          );
+          const thumbnailKey = generatePictureKey(
+            user.id,
+            file.name,
+            "thumbnail",
+          );
 
           // Upload all 3 versions to R2 in parallel
           await Promise.all([
@@ -227,7 +259,10 @@ const server = serve({
 
           // Add tags if provided
           if (tagsStr) {
-            const tags = tagsStr.split(",").map(t => t.trim()).filter(Boolean);
+            const tags = tagsStr
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean);
             if (tags.length > 0) {
               addTags(picture.id, tags);
             }
@@ -272,8 +307,14 @@ const server = serve({
 
           // Add signed URLs and tags
           const enrichedPictures = await Promise.all(
-            pictures.map(async picture => {
-              const [compressedUrl, thumbnailUrl, pictureTags, counts, userLike] = await Promise.all([
+            pictures.map(async (picture) => {
+              const [
+                compressedUrl,
+                thumbnailUrl,
+                pictureTags,
+                counts,
+                userLike,
+              ] = await Promise.all([
                 getSignedUrl(picture.compressed_r2_key),
                 getSignedUrl(picture.thumbnail_r2_key),
                 getPictureTags(picture.id),
@@ -290,7 +331,7 @@ const server = serve({
                 dislike_count: counts.dislikes,
                 user_like: userLike,
               };
-            })
+            }),
           );
 
           return Response.json(enrichedPictures);
@@ -315,7 +356,14 @@ const server = serve({
             return new Response("Picture not found", { status: 404 });
           }
 
-          const [originalUrl, compressedUrl, thumbnailUrl, tags, counts, userLike] = await Promise.all([
+          const [
+            originalUrl,
+            compressedUrl,
+            thumbnailUrl,
+            tags,
+            counts,
+            userLike,
+          ] = await Promise.all([
             getSignedUrl(picture.original_r2_key),
             getSignedUrl(picture.compressed_r2_key),
             getSignedUrl(picture.thumbnail_r2_key),
@@ -431,7 +479,10 @@ const server = serve({
 
           addTags(pictureId, tags);
 
-          return Response.json({ success: true, tags: getPictureTags(pictureId) });
+          return Response.json({
+            success: true,
+            tags: getPictureTags(pictureId),
+          });
         } catch (error) {
           if (error instanceof Error && error.message === "Unauthorized") {
             return new Response("Unauthorized", { status: 401 });
@@ -520,14 +571,15 @@ const server = serve({
           const pictures = getFeed(offset, limit);
 
           const enrichedPictures = await Promise.all(
-            pictures.map(async picture => {
-              const [compressedUrl, thumbnailUrl, tags, counts, userLike] = await Promise.all([
-                getSignedUrl(picture.compressed_r2_key),
-                getSignedUrl(picture.thumbnail_r2_key),
-                getPictureTags(picture.id),
-                getLikeCounts(picture.id),
-                getUserLike(user.id, picture.id),
-              ]);
+            pictures.map(async (picture) => {
+              const [compressedUrl, thumbnailUrl, tags, counts, userLike] =
+                await Promise.all([
+                  getSignedUrl(picture.compressed_r2_key),
+                  getSignedUrl(picture.thumbnail_r2_key),
+                  getPictureTags(picture.id),
+                  getLikeCounts(picture.id),
+                  getUserLike(user.id, picture.id),
+                ]);
 
               return {
                 ...picture,
@@ -538,7 +590,7 @@ const server = serve({
                 dislike_count: counts.dislikes,
                 user_like: userLike,
               };
-            })
+            }),
           );
 
           return Response.json(enrichedPictures);
@@ -564,14 +616,15 @@ const server = serve({
           const pictures = getTimeline(user.id, offset, limit);
 
           const enrichedPictures = await Promise.all(
-            pictures.map(async picture => {
-              const [compressedUrl, thumbnailUrl, tags, counts, userLike] = await Promise.all([
-                getSignedUrl(picture.compressed_r2_key),
-                getSignedUrl(picture.thumbnail_r2_key),
-                getPictureTags(picture.id),
-                getLikeCounts(picture.id),
-                getUserLike(user.id, picture.id),
-              ]);
+            pictures.map(async (picture) => {
+              const [compressedUrl, thumbnailUrl, tags, counts, userLike] =
+                await Promise.all([
+                  getSignedUrl(picture.compressed_r2_key),
+                  getSignedUrl(picture.thumbnail_r2_key),
+                  getPictureTags(picture.id),
+                  getLikeCounts(picture.id),
+                  getUserLike(user.id, picture.id),
+                ]);
 
               return {
                 ...picture,
@@ -582,7 +635,7 @@ const server = serve({
                 dislike_count: counts.dislikes,
                 user_like: userLike,
               };
-            })
+            }),
           );
 
           return Response.json(enrichedPictures);

@@ -1,9 +1,15 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl as awsGetSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const r2Client = new S3Client({
   region: "auto",
   endpoint: process.env.R2_ENDPOINT!,
+  forcePathStyle: true,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID!,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
@@ -16,7 +22,7 @@ const BACKUPS_BUCKET = "db-backups";
 export async function uploadToR2(
   key: string,
   buffer: Buffer,
-  contentType: string
+  contentType: string,
 ): Promise<void> {
   const command = new PutObjectCommand({
     Bucket: PHOTOS_BUCKET,
@@ -24,12 +30,23 @@ export async function uploadToR2(
     Body: buffer,
     ContentType: contentType,
   });
+  console.log(`Uploading ${key} to {PHOTOS_BUCKET}`);
 
-  await r2Client.send(command);
+  try {
+    await r2Client.send(command);
+  } catch (e: any) {
+    console.error("R2 put failed:", {
+      name: e?.name,
+      message: e?.message,
+      Code: e?.Code,
+      $metadata: e?.$metadata,
+    });
+    throw e;
+  }
 }
 
 export async function getSignedUrl(key: string): Promise<string> {
-  const command = new DeleteObjectCommand({
+  const command = new GetObjectCommand({
     Bucket: PHOTOS_BUCKET,
     Key: key,
   });
@@ -41,7 +58,9 @@ export async function getSignedUrl(key: string): Promise<string> {
 
   // For private buckets, generate signed URL (expires in 1 hour)
   try {
-    const presignedUrl = await awsGetSignedUrl(r2Client, command, { expiresIn: 3600 });
+    const presignedUrl = await awsGetSignedUrl(r2Client, command, {
+      expiresIn: 3600,
+    });
     return presignedUrl;
   } catch {
     // Fallback to direct URL if signing fails
@@ -61,7 +80,7 @@ export async function deleteFromR2(key: string): Promise<void> {
 export function generatePictureKey(
   userId: number,
   filename: string,
-  type: "original" | "compressed" | "thumbnail"
+  type: "original" | "compressed" | "thumbnail",
 ): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -77,7 +96,10 @@ export function generatePictureKey(
   return `users/${userId}/${year}/${month}/${uuid}-${type}.${finalExt}`;
 }
 
-export async function uploadBackupToR2(backupKey: string, dbBuffer: Buffer): Promise<void> {
+export async function uploadBackupToR2(
+  backupKey: string,
+  dbBuffer: Buffer,
+): Promise<void> {
   const command = new PutObjectCommand({
     Bucket: BACKUPS_BUCKET,
     Key: backupKey,

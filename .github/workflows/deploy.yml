@@ -33,8 +33,8 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /opt/photo-share
-            git pull origin main
-            docker-compose down
-            docker-compose build
-            docker-compose up -d
-            docker-compose logs --tail=50
+            git pull origin $(git rev-parse --abbrev-ref HEAD)
+            docker compose down
+            docker compose build --no-cache
+            docker compose up -d
+            docker compose logs --tail=50
