@@ -8,18 +8,46 @@ interface PictureCardProps {
     like_count?: number;
     dislike_count?: number;
     user_like?: boolean | null;
+    user_name?: string;
   };
   currentUser: User;
   onUpdate?: () => void;
+  onUserClick?: (userId: number) => void;
 }
 
-export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps) {
+function CameraTooltipContent({ picture }: { picture: PictureCardProps["picture"] }) {
+  const lines: { text: string; muted: boolean }[] = [];
+
+  const cameraName = [picture.camera_make, picture.camera_model].filter(Boolean).join(" ");
+  if (cameraName) lines.push({ text: cameraName, muted: false });
+  if (picture.lens_model) lines.push({ text: picture.lens_model, muted: true });
+
+  const settings: string[] = [];
+  if (picture.f_number != null) settings.push(`f/${picture.f_number}`);
+  if (picture.exposure_time) settings.push(picture.exposure_time);
+  if (picture.iso != null) settings.push(`ISO ${picture.iso}`);
+  if (picture.focal_length != null) settings.push(`${picture.focal_length}mm`);
+  if (settings.length > 0) lines.push({ text: settings.join("  ·  "), muted: true });
+
+  return (
+    <>
+      {lines.map((line, i) => (
+        <p key={i} className={`${i > 0 ? "mt-1" : ""} ${line.muted ? "text-zinc-400" : "text-zinc-100 font-normal"}`}>
+          {line.text}
+        </p>
+      ))}
+    </>
+  );
+}
+
+export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: PictureCardProps) {
   const [showFullSize, setShowFullSize] = useState(false);
   const [localLikeCount, setLocalLikeCount] = useState(picture.like_count || 0);
   const [localDislikeCount, setLocalDislikeCount] = useState(picture.dislike_count || 0);
   const [localUserLike, setLocalUserLike] = useState(picture.user_like);
 
   const isOwner = picture.user_id === currentUser.id;
+  const hasCameraInfo = !!(picture.camera_make || picture.camera_model);
 
   const handleLike = async (isLike: boolean) => {
     try {
@@ -61,19 +89,38 @@ export function PictureCard({ picture, currentUser, onUpdate }: PictureCardProps
   return (
     <>
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden hover:border-zinc-700 transition-colors">
-        <img
-          src={picture.thumbnail_url || ""}
-          alt={picture.description || "Photo"}
-          className="w-full h-64 object-cover cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => setShowFullSize(true)}
-          loading="lazy"
-        />
+        <div className="relative group">
+          <img
+            src={picture.thumbnail_url || ""}
+            alt={picture.description || "Photo"}
+            className="w-full h-64 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setShowFullSize(true)}
+            loading="lazy"
+          />
+          {hasCameraInfo && (
+            <div className="absolute top-2 right-2">
+              <div className="relative">
+                <div className="p-1.5 bg-black/60 rounded-md text-zinc-300 cursor-default">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="absolute right-0 top-8 w-56 p-3 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl text-xs font-light opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                  <CameraTooltipContent picture={picture} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="p-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-light text-zinc-200">
-              {(picture as any).user_name || "Unknown"}
-            </span>
+            <button
+              onClick={() => onUserClick?.(picture.user_id)}
+              className="text-sm font-light text-zinc-200 hover:text-zinc-50 transition-colors"
+            >
+              {picture.user_name || "Unknown"}
+            </button>
             <span className="text-xs text-zinc-500 font-light">
               {new Date(picture.uploaded_at).toLocaleDateString()}
             </span>

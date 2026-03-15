@@ -30,6 +30,13 @@ export interface Picture {
   like_count?: number;
   dislike_count?: number;
   user_like?: boolean | null;
+  camera_make: string | null;
+  camera_model: string | null;
+  lens_model: string | null;
+  f_number: number | null;
+  exposure_time: string | null;
+  iso: number | null;
+  focal_length: number | null;
 }
 
 export interface Tag {
@@ -66,6 +73,13 @@ export interface PictureUploadMetadata {
   height: number;
   mimeType: string;
   description?: string;
+  cameraMake?: string | null;
+  cameraModel?: string | null;
+  lensModel?: string | null;
+  fNumber?: number | null;
+  exposureTime?: string | null;
+  iso?: number | null;
+  focalLength?: number | null;
 }
 
 export interface GetPicturesFilters {
@@ -73,6 +87,12 @@ export interface GetPicturesFilters {
   tags?: string[];
   offset?: number;
   limit?: number;
+}
+
+export interface CameraInfo {
+  camera_make: string | null;
+  camera_model: string | null;
+  photo_count: number;
 }
 
 export interface CompressionResult {
@@ -85,5 +105,14 @@ export interface CompressionResult {
     format: string;
     originalSize: number;
     compressedSize: number;
+    cameraInfo: {
+      cameraMake: string | null;
+      cameraModel: string | null;
+      lensModel: string | null;
+      fNumber: number | null;
+      exposureTime: string | null;
+      iso: number | null;
+      focalLength: number | null;
+    };
   };
 }

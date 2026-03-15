@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import type { User, Picture, Tag, Like, Session, PictureUploadMetadata, GetPicturesFilters } from "./types";
+import type { User, Picture, Tag, Like, Session, PictureUploadMetadata, GetPicturesFilters, CameraInfo } from "./types";
 
 const dbPath = process.env.DATABASE_PATH || "./data/photos.db";
 const db = new Database(dbPath);
@@ -45,6 +45,20 @@ db.exec(`
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_pictures_user_id ON pictures(user_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_pictures_uploaded_at ON pictures(uploaded_at)`);
+
+// EXIF camera info migration — idempotent, safe to run on every startup
+const exifColumns = [
+  "ALTER TABLE pictures ADD COLUMN camera_make TEXT",
+  "ALTER TABLE pictures ADD COLUMN camera_model TEXT",
+  "ALTER TABLE pictures ADD COLUMN lens_model TEXT",
+  "ALTER TABLE pictures ADD COLUMN f_number REAL",
+  "ALTER TABLE pictures ADD COLUMN exposure_time TEXT",
+  "ALTER TABLE pictures ADD COLUMN iso INTEGER",
+  "ALTER TABLE pictures ADD COLUMN focal_length REAL",
+];
+for (const sql of exifColumns) {
+  try { db.exec(sql); } catch { /* column already exists */ }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS tags (
@@ -161,8 +175,9 @@ export function uploadPicture(metadata: PictureUploadMetadata): Picture {
     INSERT INTO pictures (
       user_id, original_r2_key, compressed_r2_key, thumbnail_r2_key,
       original_filename, original_size, compressed_size, width, height,
-      mime_type, description
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      mime_type, description,
+      camera_make, camera_model, lens_model, f_number, exposure_time, iso, focal_length
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `);
 
@@ -177,8 +192,26 @@ export function uploadPicture(metadata: PictureUploadMetadata): Picture {
     metadata.width,
     metadata.height,
     metadata.mimeType,
-    metadata.description || null
+    metadata.description || null,
+    metadata.cameraMake ?? null,
+    metadata.cameraModel ?? null,
+    metadata.lensModel ?? null,
+    metadata.fNumber ?? null,
+    metadata.exposureTime ?? null,
+    metadata.iso ?? null,
+    metadata.focalLength ?? null,
   ) as Picture;
+}
+
+export function getUserCameras(userId: number): CameraInfo[] {
+  const stmt = db.prepare(`
+    SELECT camera_make, camera_model, COUNT(*) as photo_count
+    FROM pictures
+    WHERE user_id = ? AND (camera_make IS NOT NULL OR camera_model IS NOT NULL)
+    GROUP BY camera_make, camera_model
+    ORDER BY photo_count DESC
+  `);
+  return stmt.all(userId) as CameraInfo[];
 }
 
 export function getPictureById(pictureId: number): Picture | null {
