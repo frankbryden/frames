@@ -3,20 +3,6 @@ import index from "./index.html";
 
 const isProd = process.env.NODE_ENV === "production";
 
-async function serveStatic(req: Request): Promise<Response> {
-  const pathname = new URL(req.url).pathname;
-  const file = Bun.file(`dist${pathname}`);
-  if (await file.exists()) {
-    // Hashed assets (JS/CSS) are immutable; cache aggressively
-    return new Response(file, {
-      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
-    });
-  }
-  // SPA fallback: always serve index.html for unknown paths
-  return new Response(Bun.file("dist/index.html"), {
-    headers: { "Cache-Control": "no-cache" },
-  });
-}
 import {
   generateGoogleAuthUrl,
   exchangeCodeForToken,
@@ -92,7 +78,7 @@ function requireAuth(req: Request): User {
 const server = serve({
   port: PORT,
   routes: {
-    "/*": isProd ? serveStatic : index,
+    "/*": index,
 
     // Health check
     "/api/health": {
