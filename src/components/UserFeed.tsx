@@ -4,9 +4,10 @@ import type { User, Picture } from "../types";
 
 interface UserFeedProps {
   user: User;
+  onUserClick: (userId: number) => void;
 }
 
-export function UserFeed({ user }: UserFeedProps) {
+export function UserFeed({ user, onUserClick }: UserFeedProps) {
   const [pictures, setPictures] = useState<Picture[]>([]);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
@@ -59,6 +60,7 @@ export function UserFeed({ user }: UserFeedProps) {
                 picture={picture}
                 currentUser={user}
                 onUpdate={handleUpdate}
+                onUserClick={onUserClick}
               />
             ))}
           </div>

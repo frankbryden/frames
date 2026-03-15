@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import exifr from "exifr";
 import type { CompressionResult } from "./types";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -18,6 +19,36 @@ export async function compressImage(fileBuffer: Buffer): Promise<CompressionResu
 
   if (!metadata.width || !metadata.height) {
     throw new Error("Invalid image: could not read dimensions");
+  }
+
+  // Extract EXIF from original buffer before compression strips it
+  const cameraInfo: CompressionResult["metadata"]["cameraInfo"] = {
+    cameraMake: null,
+    cameraModel: null,
+    lensModel: null,
+    fNumber: null,
+    exposureTime: null,
+    iso: null,
+    focalLength: null,
+  };
+  try {
+    const exif = await exifr.parse(fileBuffer, {
+      pick: ["Make", "Model", "LensModel", "FNumber", "ExposureTime", "ISO", "FocalLength"],
+    });
+    if (exif) {
+      cameraInfo.cameraMake = exif.Make ?? null;
+      cameraInfo.cameraModel = exif.Model ?? null;
+      cameraInfo.lensModel = exif.LensModel ?? null;
+      cameraInfo.fNumber = exif.FNumber ?? null;
+      if (exif.ExposureTime != null) {
+        const et = exif.ExposureTime as number;
+        cameraInfo.exposureTime = et < 1 ? `1/${Math.round(1 / et)}s` : `${et}s`;
+      }
+      cameraInfo.iso = exif.ISO ?? null;
+      cameraInfo.focalLength = exif.FocalLength ?? null;
+    }
+  } catch {
+    // No EXIF or unreadable — leave all fields null
   }
 
   // Compressed version (1920px max width, 85% quality, progressive JPEG)
@@ -48,6 +79,7 @@ export async function compressImage(fileBuffer: Buffer): Promise<CompressionResu
       format: metadata.format || "unknown",
       originalSize: fileBuffer.length,
       compressedSize: compressed.length,
+      cameraInfo,
     },
   };
 }

@@ -6,9 +6,10 @@ interface HeaderProps {
   user: User;
   view: View;
   setView: (view: View) => void;
+  onProfileClick: () => void;
 }
 
-export function Header({ user, view, setView }: HeaderProps) {
+export function Header({ user, view, setView, onProfileClick }: HeaderProps) {
   const handleLogout = async () => {
     await fetch("/auth/logout", {
       method: "POST",
@@ -58,14 +59,19 @@ export function Header({ user, view, setView }: HeaderProps) {
             </button>
 
             <div className="flex items-center gap-3 ml-6 pl-6 border-l border-zinc-800">
-              {user.avatar_url && (
-                <img
-                  src={user.avatar_url}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full ring-1 ring-zinc-700"
-                />
-              )}
-              <span className="text-sm text-zinc-300 font-light">{user.name}</span>
+              <button
+                onClick={onProfileClick}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              >
+                {user.avatar_url && (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full ring-1 ring-zinc-700"
+                  />
+                )}
+                <span className="text-sm text-zinc-300 font-light">{user.name}</span>
+              </button>
               <button
                 onClick={handleLogout}
                 className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"

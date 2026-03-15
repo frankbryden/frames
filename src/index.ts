@@ -29,6 +29,8 @@ import {
   getLikeCounts,
   getUserLike,
   cleanupExpiredSessions,
+  getUserById,
+  getUserCameras,
 } from "./db";
 import { compressImage, validateImageFile } from "./compression";
 import {
@@ -255,6 +257,13 @@ const server = serve({
             height: metadata.height,
             mimeType: file.type,
             description: description || undefined,
+            cameraMake: metadata.cameraInfo.cameraMake,
+            cameraModel: metadata.cameraInfo.cameraModel,
+            lensModel: metadata.cameraInfo.lensModel,
+            fNumber: metadata.cameraInfo.fNumber,
+            exposureTime: metadata.cameraInfo.exposureTime,
+            iso: metadata.cameraInfo.iso,
+            focalLength: metadata.cameraInfo.focalLength,
           });
 
           // Add tags if provided
@@ -660,6 +669,41 @@ const server = serve({
             return new Response("Unauthorized", { status: 401 });
           }
           return new Response("Failed to fetch tags", { status: 500 });
+        }
+      },
+    },
+
+    // Get cameras used by a user (must come before /api/users/:id)
+    "/api/users/:id/cameras": {
+      async GET(req) {
+        try {
+          requireAuth(req);
+          const userId = parseInt(req.params.id);
+          const cameras = getUserCameras(userId);
+          return Response.json(cameras);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to fetch cameras", { status: 500 });
+        }
+      },
+    },
+
+    // Get public user info
+    "/api/users/:id": {
+      async GET(req) {
+        try {
+          requireAuth(req);
+          const userId = parseInt(req.params.id);
+          const u = getUserById(userId);
+          if (!u) return new Response("User not found", { status: 404 });
+          return Response.json({ id: u.id, name: u.name, avatar_url: u.avatar_url });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to fetch user", { status: 500 });
         }
       },
     },
