@@ -1,5 +1,14 @@
 import { serve } from "bun";
 import index from "./index.html";
+
+const isProd = process.env.NODE_ENV === "production";
+
+async function serveStatic(req: Request): Promise<Response> {
+  const pathname = new URL(req.url).pathname;
+  const file = Bun.file(`dist${pathname}`);
+  if (await file.exists()) return new Response(file);
+  return new Response(Bun.file("dist/index.html"));
+}
 import {
   generateGoogleAuthUrl,
   exchangeCodeForToken,
@@ -75,7 +84,7 @@ function requireAuth(req: Request): User {
 const server = serve({
   port: PORT,
   routes: {
-    "/*": index,
+    "/*": isProd ? serveStatic : index,
 
     // Health check
     "/api/health": {
@@ -851,10 +860,7 @@ const server = serve({
     },
   },
 
-  development: {
-    hmr: true,
-    console: true,
-  },
+  development: isProd ? false : { hmr: true, console: true },
 });
 
 console.log(`🚀 Server running at http://localhost:${PORT}`);
