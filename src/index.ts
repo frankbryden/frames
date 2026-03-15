@@ -194,10 +194,6 @@ const server = serve({
     "/api/me": {
       async GET(req) {
         const user = getUserFromSession(req);
-        console.log("MEEE");
-        uploadToR2("fr-test", Buffer.from("hey"), "text/plain").then((res) =>
-          console.log(res),
-        );
         if (!user) {
           return new Response("Unauthorized", { status: 401 });
         }
