@@ -30,7 +30,7 @@ export async function uploadToR2(
     Body: buffer,
     ContentType: contentType,
   });
-  console.log(`Uploading ${key} to {PHOTOS_BUCKET}`);
+  console.log(`Uploading ${key} to ${PHOTOS_BUCKET}`);
 
   try {
     await r2Client.send(command);
