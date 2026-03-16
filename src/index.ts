@@ -1,7 +1,19 @@
 import { serve } from "bun";
-import index from "./index.html";
 
-const isProd = process.env.NODE_ENV === "production";
+async function serveStatic(req: Request): Promise<Response> {
+  const pathname = new URL(req.url).pathname;
+  if (pathname.includes(".")) {
+    const file = Bun.file(`dist${pathname}`);
+    if (await file.exists()) {
+      return new Response(file, {
+        headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+      });
+    }
+  }
+  return new Response(Bun.file("dist/index.html"), {
+    headers: { "Cache-Control": "no-cache" },
+  });
+}
 
 import {
   generateGoogleAuthUrl,
@@ -78,7 +90,7 @@ function requireAuth(req: Request): User {
 const server = serve({
   port: PORT,
   routes: {
-    "/*": index,
+    "/*": serveStatic,
 
     // Health check
     "/api/health": {
@@ -854,7 +866,6 @@ const server = serve({
     },
   },
 
-  development: isProd ? false : { hmr: true, console: true },
 });
 
 console.log(`🚀 Server running at http://localhost:${PORT}`);
