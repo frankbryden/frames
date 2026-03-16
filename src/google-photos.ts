@@ -163,8 +163,10 @@ export async function deletePickerSession(
   });
 }
 
-export async function downloadMediaItem(baseUrl: string): Promise<Buffer> {
-  const response = await fetch(`${baseUrl}=d`);
+export async function downloadMediaItem(baseUrl: string, accessToken: string): Promise<Buffer> {
+  const response = await fetch(`${baseUrl}=d`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to download media item: ${response.status}`);

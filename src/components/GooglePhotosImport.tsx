@@ -165,7 +165,7 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
           {items.map((item) => (
             <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden bg-zinc-800">
               <img
-                src={`${item.mediaFile.baseUrl}=w300-h300-c`}
+                src={`/api/google-photos/thumbnail?url=${encodeURIComponent(item.mediaFile.baseUrl)}`}
                 alt={item.mediaFile.filename}
                 className="w-full h-full object-cover"
                 loading="lazy"

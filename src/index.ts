@@ -759,6 +759,43 @@ const server = serve({
       },
     },
 
+    "/api/google-photos/thumbnail": {
+      async GET(req) {
+        try {
+          const user = requireAuth(req);
+          const url = new URL(req.url);
+          const baseUrl = url.searchParams.get("url");
+          const size = url.searchParams.get("size") ?? "w300-h300-c";
+
+          if (!baseUrl || !baseUrl.startsWith("https://lh3.googleusercontent.com/")) {
+            return new Response("Invalid url", { status: 400 });
+          }
+
+          const accessToken = await getValidToken(user.id);
+          const response = await fetch(`${baseUrl}=${size}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+          if (!response.ok) {
+            return new Response("Failed to fetch thumbnail", { status: response.status });
+          }
+
+          const contentType = response.headers.get("Content-Type") ?? "image/jpeg";
+          return new Response(response.body, {
+            headers: {
+              "Content-Type": contentType,
+              "Cache-Control": "private, max-age=3600",
+            },
+          });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Thumbnail fetch failed", { status: 500 });
+        }
+      },
+    },
+
     "/api/google-photos/picker/session/:id": {
       async GET(req) {
         try {
@@ -800,7 +837,7 @@ const server = serve({
           for (const item of items) {
             if (!item.mediaFile.mimeType.startsWith("image/")) continue;
 
-            const fileBuffer = await downloadMediaItem(item.mediaFile.baseUrl);
+            const fileBuffer = await downloadMediaItem(item.mediaFile.baseUrl, accessToken);
             const { original, compressed, thumbnail, metadata } = await compressImage(fileBuffer);
 
             const originalKey = generatePictureKey(user.id, item.mediaFile.filename, "original");
