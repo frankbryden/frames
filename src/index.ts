@@ -772,21 +772,26 @@ const server = serve({
           }
 
           const accessToken = await getValidToken(user.id);
-          const response = await fetch(`${baseUrl}=${size}`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
 
-          if (!response.ok) {
-            return new Response("Failed to fetch thumbnail", { status: response.status });
+          // Try with size param first, fall back to bare URL
+          for (const fetchUrl of [`${baseUrl}=w300`, baseUrl]) {
+            const response = await fetch(fetchUrl, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            console.log(`Thumbnail fetch ${fetchUrl}: ${response.status}`);
+            if (response.ok) {
+              const contentType = response.headers.get("Content-Type") ?? "image/jpeg";
+              return new Response(response.body, {
+                headers: {
+                  "Content-Type": contentType,
+                  "Cache-Control": "private, max-age=3600",
+                },
+              });
+            }
+            const body = await response.text();
+            console.error(`Thumbnail ${response.status}:`, body.slice(0, 200));
           }
-
-          const contentType = response.headers.get("Content-Type") ?? "image/jpeg";
-          return new Response(response.body, {
-            headers: {
-              "Content-Type": contentType,
-              "Cache-Control": "private, max-age=3600",
-            },
-          });
+          return new Response("Failed to fetch thumbnail", { status: 502 });
         } catch (error) {
           if (error instanceof Error && error.message === "Unauthorized") {
             return new Response("Unauthorized", { status: 401 });

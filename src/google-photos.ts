@@ -164,13 +164,17 @@ export async function deletePickerSession(
 }
 
 export async function downloadMediaItem(baseUrl: string, accessToken: string): Promise<Buffer> {
-  const response = await fetch(`${baseUrl}=d`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to download media item: ${response.status}`);
+  // Try =d (original quality) first, fall back to bare URL
+  for (const fetchUrl of [`${baseUrl}=d`, baseUrl]) {
+    const response = await fetch(fetchUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    console.log(`Download ${fetchUrl}: ${response.status}`);
+    if (response.ok) {
+      return Buffer.from(await response.arrayBuffer());
+    }
+    const body = await response.text();
+    console.error(`Download ${response.status}:`, body.slice(0, 200));
   }
-
-  return Buffer.from(await response.arrayBuffer());
+  throw new Error("Failed to download media item after retries");
 }
