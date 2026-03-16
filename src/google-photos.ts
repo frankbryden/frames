@@ -94,7 +94,9 @@ export async function listAlbums(accessToken: string): Promise<GooglePhotosAlbum
     });
 
     if (!response.ok) {
-      throw new Error(`Google Photos albums error: ${response.status}`);
+      const body = await response.text();
+      console.error(`Google Photos albums error ${response.status}:`, body);
+      throw new Error(`Google Photos albums error: ${response.status} — ${body}`);
     }
 
     const data = (await response.json()) as { albums?: GooglePhotosAlbum[]; nextPageToken?: string };
