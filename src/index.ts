@@ -1,26 +1,24 @@
 import { serve } from "bun";
+import index from "./index.html";
+
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 async function serveStatic(req: Request): Promise<Response> {
   const pathname = new URL(req.url).pathname;
   if (pathname.includes(".")) {
     const file = Bun.file(`dist${pathname}`);
     if (await file.exists()) {
-      const buffer = await file.arrayBuffer();
-      return new Response(buffer, {
+      return new Response(file.stream(), {
         headers: {
           "Content-Type": file.type,
-          "Content-Length": String(buffer.byteLength),
           "Cache-Control": "public, max-age=31536000, immutable",
         },
       });
     }
   }
-  const html = Bun.file("dist/index.html");
-  const buffer = await html.arrayBuffer();
-  return new Response(buffer, {
+  return new Response(Bun.file("dist/index.html").stream(), {
     headers: {
       "Content-Type": "text/html",
-      "Content-Length": String(buffer.byteLength),
       "Cache-Control": "no-cache",
     },
   });
@@ -102,7 +100,7 @@ function requireAuth(req: Request): User {
 const server = serve({
   port: PORT,
   routes: {
-    "/*": serveStatic,
+    "/*": IS_PRODUCTION ? serveStatic : index,
 
     // Health check
     "/api/health": {
