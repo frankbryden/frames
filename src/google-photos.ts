@@ -63,6 +63,8 @@ export async function getValidToken(userId: number): Promise<string> {
     throw new Error("No Google Photos access token. Please sign in again.");
   }
 
+  console.log(`getValidToken: access_token prefix=${tokens.google_access_token.slice(0, 10)}, expires_at=${tokens.google_token_expires_at}, refresh_token present=${!!tokens.google_refresh_token}`);
+
   // Refresh if expiring within 5 minutes
   const expiresAt = tokens.google_token_expires_at
     ? new Date(tokens.google_token_expires_at)
@@ -70,14 +72,17 @@ export async function getValidToken(userId: number): Promise<string> {
   const fiveMinutes = 5 * 60 * 1000;
 
   if (Date.now() >= expiresAt.getTime() - fiveMinutes) {
+    console.log("getValidToken: token expired/expiring, refreshing...");
     if (!tokens.google_refresh_token) {
       throw new Error("Google Photos token expired. Please sign in again.");
     }
     const refreshed = await refreshAccessToken(tokens.google_refresh_token);
+    console.log("getValidToken: refreshed, new prefix=", refreshed.accessToken.slice(0, 10));
     storeGoogleTokens(userId, refreshed.accessToken, null, refreshed.expiresAt);
     return refreshed.accessToken;
   }
 
+  console.log("getValidToken: token still valid, using stored token");
   return tokens.google_access_token;
 }
 
