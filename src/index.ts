@@ -50,9 +50,10 @@ import {
 } from "./db";
 import {
   getValidToken,
-  listAlbums,
-  listMediaItems,
-  batchGetMediaItems,
+  createPickerSession,
+  getPickerSession,
+  listPickerMediaItems,
+  deletePickerSession,
   downloadMediaItem,
 } from "./google-photos";
 import { compressImage, validateImageFile } from "./compression";
@@ -731,58 +732,42 @@ const server = serve({
       },
     },
 
-    // Debug: verify token scopes
-    "/api/google-photos/debug-token": {
-      async GET(req) {
+    // Google Photos Picker API
+    "/api/google-photos/picker/session": {
+      async POST(req) {
         try {
           const user = requireAuth(req);
           const accessToken = await getValidToken(user.id);
-          const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`);
-          const info = await res.json();
-          return Response.json(info);
+          const session = await createPickerSession(accessToken);
+          return Response.json({ sessionId: session.id, pickerUri: session.pickerUri });
         } catch (error) {
           if (error instanceof Error && error.message === "Unauthorized") {
             return new Response("Unauthorized", { status: 401 });
           }
-          return Response.json({ error: String(error) });
-        }
-      },
-    },
-
-    // Google Photos import
-    "/api/google-photos/albums": {
-      async GET(req) {
-        try {
-          const user = requireAuth(req);
-          const accessToken = await getValidToken(user.id);
-          const albums = await listAlbums(accessToken);
-          return Response.json(albums);
-        } catch (error) {
-          if (error instanceof Error && error.message === "Unauthorized") {
-            return new Response("Unauthorized", { status: 401 });
-          }
-          const msg = error instanceof Error ? error.message : "Failed to fetch albums";
+          const msg = error instanceof Error ? error.message : "Failed to create picker session";
           return new Response(msg, { status: 500 });
         }
       },
     },
 
-    "/api/google-photos/media": {
+    "/api/google-photos/picker/session/:id": {
       async GET(req) {
         try {
           const user = requireAuth(req);
-          const url = new URL(req.url);
-          const albumId = url.searchParams.get("albumId") ?? undefined;
-          const pageToken = url.searchParams.get("pageToken") ?? undefined;
-
           const accessToken = await getValidToken(user.id);
-          const result = await listMediaItems(accessToken, albumId, pageToken);
-          return Response.json(result);
+          const session = await getPickerSession(accessToken, req.params.id);
+
+          if (!session.mediaItemsSet) {
+            return Response.json({ ready: false });
+          }
+
+          const items = await listPickerMediaItems(accessToken, req.params.id);
+          return Response.json({ ready: true, items });
         } catch (error) {
           if (error instanceof Error && error.message === "Unauthorized") {
             return new Response("Unauthorized", { status: 401 });
           }
-          const msg = error instanceof Error ? error.message : "Failed to fetch media";
+          const msg = error instanceof Error ? error.message : "Failed to poll session";
           return new Response(msg, { status: 500 });
         }
       },
@@ -792,63 +777,70 @@ const server = serve({
       async POST(req) {
         try {
           const user = requireAuth(req);
-          const body = await req.json() as { mediaItemIds: string[]; description?: string };
-          const { mediaItemIds, description } = body;
+          const body = await req.json() as { sessionId: string; description?: string };
+          const { sessionId, description } = body;
 
-          if (!Array.isArray(mediaItemIds) || mediaItemIds.length === 0) {
-            return new Response("mediaItemIds required", { status: 400 });
+          if (!sessionId) {
+            return new Response("sessionId required", { status: 400 });
           }
 
           const accessToken = await getValidToken(user.id);
-
-          // Fetch fresh media item details (baseUrl expires quickly)
-          const mediaItems = await batchGetMediaItems(accessToken, mediaItemIds);
-
+          const items = await listPickerMediaItems(accessToken, sessionId);
           const imported: number[] = [];
 
-          for (const item of mediaItems) {
-            // Only import images
-            if (!item.mimeType.startsWith("image/")) continue;
+          for (const item of items) {
+            if (!item.mediaFile.mimeType.startsWith("image/")) continue;
 
-            const fileBuffer = await downloadMediaItem(item.baseUrl);
-
+            const fileBuffer = await downloadMediaItem(item.mediaFile.baseUrl);
             const { original, compressed, thumbnail, metadata } = await compressImage(fileBuffer);
 
-            const originalKey = generatePictureKey(user.id, item.filename, "original");
-            const compressedKey = generatePictureKey(user.id, item.filename, "compressed");
-            const thumbnailKey = generatePictureKey(user.id, item.filename, "thumbnail");
+            const originalKey = generatePictureKey(user.id, item.mediaFile.filename, "original");
+            const compressedKey = generatePictureKey(user.id, item.mediaFile.filename, "compressed");
+            const thumbnailKey = generatePictureKey(user.id, item.mediaFile.filename, "thumbnail");
 
             await Promise.all([
-              uploadToR2(originalKey, original, item.mimeType),
+              uploadToR2(originalKey, original, item.mediaFile.mimeType),
               uploadToR2(compressedKey, compressed, "image/jpeg"),
               uploadToR2(thumbnailKey, thumbnail, "image/webp"),
             ]);
 
-            // Use Google Photos EXIF data as fallback when EXIF is stripped
-            const photoMeta = item.mediaMetadata.photo;
+            const photoMeta = item.mediaFile.mediaFileMetadata?.photoMetadata;
+
+            // Parse Google's exposure time format ("0.000846605s" → "1/1182s")
+            let exposureTime: string | null = metadata.cameraInfo.exposureTime;
+            if (!exposureTime && photoMeta?.exposureTime) {
+              const secs = parseFloat(photoMeta.exposureTime);
+              if (!isNaN(secs) && secs > 0) {
+                exposureTime = secs < 1 ? `1/${Math.round(1 / secs)}s` : `${secs}s`;
+              }
+            }
+
             const picture = uploadPicture({
               userId: user.id,
               originalKey,
               compressedKey,
               thumbnailKey,
-              originalFilename: item.filename,
+              originalFilename: item.mediaFile.filename,
               originalSize: metadata.originalSize,
               compressedSize: metadata.compressedSize,
               width: metadata.width,
               height: metadata.height,
-              mimeType: item.mimeType,
+              mimeType: item.mediaFile.mimeType,
               description: description || undefined,
               cameraMake: metadata.cameraInfo.cameraMake ?? photoMeta?.cameraMake ?? null,
               cameraModel: metadata.cameraInfo.cameraModel ?? photoMeta?.cameraModel ?? null,
               lensModel: metadata.cameraInfo.lensModel,
               fNumber: metadata.cameraInfo.fNumber ?? photoMeta?.apertureFNumber ?? null,
-              exposureTime: metadata.cameraInfo.exposureTime ?? photoMeta?.exposureTime ?? null,
+              exposureTime,
               iso: metadata.cameraInfo.iso ?? photoMeta?.isoEquivalent ?? null,
               focalLength: metadata.cameraInfo.focalLength ?? photoMeta?.focalLength ?? null,
             });
 
             imported.push(picture.id);
           }
+
+          // Clean up the picker session
+          await deletePickerSession(accessToken, sessionId).catch(() => {});
 
           return Response.json({ imported: imported.length, ids: imported });
         } catch (error) {

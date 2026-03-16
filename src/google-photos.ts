@@ -2,31 +2,38 @@ import { getGoogleTokens, storeGoogleTokens } from "./db";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
-const BASE_URL = "https://photoslibrary.googleapis.com/v1";
+const PICKER_BASE_URL = "https://photospicker.googleapis.com/v1";
 
-export interface GooglePhotosAlbum {
+export interface PickerSession {
   id: string;
-  title: string;
-  coverPhotoBaseUrl?: string;
-  mediaItemsCount?: string;
+  pickerUri: string;
+  mediaItemsSet?: boolean;
+  expireTime: string;
+  pollingConfig?: {
+    pollInterval: string; // e.g. "5s"
+    timeoutIn: string;
+  };
 }
 
-export interface GooglePhotosMediaItem {
+export interface PickerMediaItem {
   id: string;
-  filename: string;
-  baseUrl: string;
-  mimeType: string;
-  mediaMetadata: {
-    width: string;
-    height: string;
-    creationTime: string;
-    photo?: {
-      cameraMake?: string;
-      cameraModel?: string;
-      focalLength?: number;
-      apertureFNumber?: number;
-      isoEquivalent?: number;
-      exposureTime?: string;
+  createTime: string;
+  type: string;
+  mediaFile: {
+    baseUrl: string;
+    mimeType: string;
+    filename: string;
+    mediaFileMetadata?: {
+      width?: number;
+      height?: number;
+      photoMetadata?: {
+        cameraMake?: string;
+        cameraModel?: string;
+        focalLength?: number;
+        apertureFNumber?: number;
+        isoEquivalent?: number;
+        exposureTime?: string;
+      };
     };
   };
 }
@@ -63,129 +70,105 @@ export async function getValidToken(userId: number): Promise<string> {
     throw new Error("No Google Photos access token. Please sign in again.");
   }
 
-  console.log(`getValidToken: access_token prefix=${tokens.google_access_token.slice(0, 10)}, expires_at=${tokens.google_token_expires_at}, refresh_token present=${!!tokens.google_refresh_token}`);
-
-  // Refresh if expiring within 5 minutes
   const expiresAt = tokens.google_token_expires_at
     ? new Date(tokens.google_token_expires_at)
     : new Date(0);
   const fiveMinutes = 5 * 60 * 1000;
 
   if (Date.now() >= expiresAt.getTime() - fiveMinutes) {
-    console.log("getValidToken: token expired/expiring, refreshing...");
     if (!tokens.google_refresh_token) {
       throw new Error("Google Photos token expired. Please sign in again.");
     }
     const refreshed = await refreshAccessToken(tokens.google_refresh_token);
-    console.log("getValidToken: refreshed, new prefix=", refreshed.accessToken.slice(0, 10));
     storeGoogleTokens(userId, refreshed.accessToken, null, refreshed.expiresAt);
     return refreshed.accessToken;
   }
 
-  console.log("getValidToken: token still valid, using stored token");
   return tokens.google_access_token;
 }
 
-export async function listAlbums(accessToken: string): Promise<GooglePhotosAlbum[]> {
-  const albums: GooglePhotosAlbum[] = [];
+export async function createPickerSession(accessToken: string): Promise<PickerSession> {
+  const response = await fetch(`${PICKER_BASE_URL}/sessions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error(`Picker createSession error ${response.status}:`, body);
+    throw new Error(`Failed to create picker session: ${response.status} — ${body}`);
+  }
+
+  return (await response.json()) as PickerSession;
+}
+
+export async function getPickerSession(
+  accessToken: string,
+  sessionId: string,
+): Promise<PickerSession> {
+  const response = await fetch(`${PICKER_BASE_URL}/sessions/${sessionId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Failed to get picker session: ${response.status} — ${body}`);
+  }
+
+  return (await response.json()) as PickerSession;
+}
+
+export async function listPickerMediaItems(
+  accessToken: string,
+  sessionId: string,
+): Promise<PickerMediaItem[]> {
+  const items: PickerMediaItem[] = [];
   let pageToken: string | undefined;
 
   do {
-    const params = new URLSearchParams({ pageSize: "50" });
+    const params = new URLSearchParams({ sessionId, pageSize: "100" });
     if (pageToken) params.set("pageToken", pageToken);
 
-    const response = await fetch(`${BASE_URL}/albums?${params}`, {
+    const response = await fetch(`${PICKER_BASE_URL}/mediaItems?${params}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!response.ok) {
       const body = await response.text();
-      console.error(`Google Photos albums error ${response.status}:`, body);
-      throw new Error(`Google Photos albums error: ${response.status} — ${body}`);
+      throw new Error(`Failed to list picker media items: ${response.status} — ${body}`);
     }
 
-    const data = (await response.json()) as { albums?: GooglePhotosAlbum[]; nextPageToken?: string };
-    if (data.albums) albums.push(...data.albums);
+    const data = (await response.json()) as {
+      mediaItems?: PickerMediaItem[];
+      nextPageToken?: string;
+    };
+    if (data.mediaItems) items.push(...data.mediaItems);
     pageToken = data.nextPageToken;
   } while (pageToken);
 
-  return albums;
+  return items;
 }
 
-export async function listMediaItems(
+export async function deletePickerSession(
   accessToken: string,
-  albumId?: string,
-  pageToken?: string,
-): Promise<{ items: GooglePhotosMediaItem[]; nextPageToken?: string }> {
-  if (albumId) {
-    const body: Record<string, unknown> = { albumId, pageSize: 100 };
-    if (pageToken) body.pageToken = pageToken;
-
-    const response = await fetch(`${BASE_URL}/mediaItems:search`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Google Photos media error: ${response.status}`);
-    }
-
-    const data = (await response.json()) as { mediaItems?: GooglePhotosMediaItem[]; nextPageToken?: string };
-    return { items: data.mediaItems ?? [], nextPageToken: data.nextPageToken };
-  }
-
-  // All photos
-  const params = new URLSearchParams({ pageSize: "100" });
-  if (pageToken) params.set("pageToken", pageToken);
-
-  const response = await fetch(`${BASE_URL}/mediaItems?${params}`, {
+  sessionId: string,
+): Promise<void> {
+  await fetch(`${PICKER_BASE_URL}/sessions/${sessionId}`, {
+    method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-
-  if (!response.ok) {
-    throw new Error(`Google Photos media error: ${response.status}`);
-  }
-
-  const data = (await response.json()) as { mediaItems?: GooglePhotosMediaItem[]; nextPageToken?: string };
-  return { items: data.mediaItems ?? [], nextPageToken: data.nextPageToken };
-}
-
-export async function batchGetMediaItems(
-  accessToken: string,
-  mediaItemIds: string[],
-): Promise<GooglePhotosMediaItem[]> {
-  const params = new URLSearchParams();
-  for (const id of mediaItemIds) params.append("mediaItemIds", id);
-
-  const response = await fetch(`${BASE_URL}/mediaItems:batchGet?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Google Photos batchGet error: ${response.status}`);
-  }
-
-  const data = (await response.json()) as {
-    mediaItemResults: Array<{ mediaItem?: GooglePhotosMediaItem; status?: { message: string } }>;
-  };
-
-  return data.mediaItemResults
-    .filter((r) => r.mediaItem)
-    .map((r) => r.mediaItem!);
 }
 
 export async function downloadMediaItem(baseUrl: string): Promise<Buffer> {
-  // Append =d to get the original download
   const response = await fetch(`${baseUrl}=d`);
 
   if (!response.ok) {
     throw new Error(`Failed to download media item: ${response.status}`);
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  return Buffer.from(await response.arrayBuffer());
 }
