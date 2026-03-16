@@ -77,6 +77,8 @@ export async function exchangeCodeForToken(code: string): Promise<GoogleTokens> 
   }
 
   const data = (await response.json()) as GoogleTokenResponse;
+  console.log("OAuth token exchange — granted scopes:", data.scope);
+  console.log("OAuth token exchange — refresh_token present:", !!data.refresh_token);
   const expiresAt = new Date(Date.now() + data.expires_in * 1000);
   return {
     accessToken: data.access_token,

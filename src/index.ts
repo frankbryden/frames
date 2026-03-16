@@ -162,6 +162,7 @@ const server = serve({
 
           // Store Google tokens for Photos API access
           storeGoogleTokens(user.id, tokens.accessToken, tokens.refreshToken, tokens.expiresAt);
+          console.log(`Stored Google tokens for user ${user.id}, refreshToken present: ${!!tokens.refreshToken}`);
 
           // Create session
           const sessionId = createSession(user.id);
