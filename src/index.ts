@@ -5,13 +5,24 @@ async function serveStatic(req: Request): Promise<Response> {
   if (pathname.includes(".")) {
     const file = Bun.file(`dist${pathname}`);
     if (await file.exists()) {
-      return new Response(file, {
-        headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+      const buffer = await file.arrayBuffer();
+      return new Response(buffer, {
+        headers: {
+          "Content-Type": file.type,
+          "Content-Length": String(buffer.byteLength),
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
       });
     }
   }
-  return new Response(Bun.file("dist/index.html"), {
-    headers: { "Cache-Control": "no-cache" },
+  const html = Bun.file("dist/index.html");
+  const buffer = await html.arrayBuffer();
+  return new Response(buffer, {
+    headers: {
+      "Content-Type": "text/html",
+      "Content-Length": String(buffer.byteLength),
+      "Cache-Control": "no-cache",
+    },
   });
 }
 
