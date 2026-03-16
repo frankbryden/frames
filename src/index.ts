@@ -731,6 +731,24 @@ const server = serve({
       },
     },
 
+    // Debug: verify token scopes
+    "/api/google-photos/debug-token": {
+      async GET(req) {
+        try {
+          const user = requireAuth(req);
+          const accessToken = await getValidToken(user.id);
+          const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`);
+          const info = await res.json();
+          return Response.json(info);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return Response.json({ error: String(error) });
+        }
+      },
+    },
+
     // Google Photos import
     "/api/google-photos/albums": {
       async GET(req) {
