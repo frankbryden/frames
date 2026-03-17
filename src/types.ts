@@ -25,6 +25,7 @@ export interface Picture {
   height: number;
   mime_type: string;
   description: string | null;
+  frame?: string | null;
   uploaded_at: string;
   tags?: Tag[];
   like_count?: number;

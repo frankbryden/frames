@@ -44,6 +44,7 @@ import {
   getFeed,
   getTimeline,
   updatePictureDescription,
+  updatePictureFrame,
   deletePicture,
   addTags,
   removeTags,
@@ -447,10 +448,15 @@ const server = serve({
           }
 
           const body = await req.json();
-          const { description } = body;
+          const { description, frame } = body;
+          const VALID_FRAMES = ['none', 'white', 'polaroid', 'dark', 'film'];
 
           if (typeof description === "string") {
             updatePictureDescription(pictureId, description);
+          }
+
+          if (typeof frame === "string" && VALID_FRAMES.includes(frame)) {
+            updatePictureFrame(pictureId, frame);
           }
 
           return Response.json({ success: true });

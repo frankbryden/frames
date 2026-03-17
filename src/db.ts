@@ -55,6 +55,7 @@ const exifColumns = [
   "ALTER TABLE pictures ADD COLUMN exposure_time TEXT",
   "ALTER TABLE pictures ADD COLUMN iso INTEGER",
   "ALTER TABLE pictures ADD COLUMN focal_length REAL",
+  "ALTER TABLE pictures ADD COLUMN frame TEXT DEFAULT 'none'",
 ];
 for (const sql of exifColumns) {
   try { db.exec(sql); } catch { /* column already exists */ }
@@ -317,6 +318,10 @@ export function getTimeline(userId: number, offset: number = 0, limit: number = 
 export function updatePictureDescription(pictureId: number, description: string): void {
   const stmt = db.prepare("UPDATE pictures SET description = ? WHERE id = ?");
   stmt.run(description, pictureId);
+}
+
+export function updatePictureFrame(pictureId: number, frame: string): void {
+  db.prepare("UPDATE pictures SET frame = ? WHERE id = ?").run(frame, pictureId);
 }
 
 export function deletePicture(pictureId: number): Picture | null {

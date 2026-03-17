@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { Picture, User } from "../types";
 import { TagInput } from "./TagInput";
+import { FRAMES, getFrame } from "../frames";
 
 interface PictureCardProps {
   picture: Picture & {
@@ -49,10 +50,12 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   const [editing, setEditing] = useState(false);
   const [editDescription, setEditDescription] = useState(picture.description || "");
   const [editTags, setEditTags] = useState((picture.tags || []).map(t => t.name));
+  const [editFrame, setEditFrame] = useState(picture.frame || 'none');
   const [saving, setSaving] = useState(false);
 
   const isOwner = picture.user_id === currentUser.id;
   const hasCameraInfo = !!(picture.camera_make || picture.camera_model);
+  const frame = getFrame(picture.frame);
 
   const handleLike = async (isLike: boolean) => {
     try {
@@ -77,12 +80,12 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   const handleSaveEdit = async () => {
     setSaving(true);
     try {
-      // Update description
+      // Update description and frame
       await fetch(`/api/pictures/${picture.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: editDescription }),
+        body: JSON.stringify({ description: editDescription, frame: editFrame }),
       });
 
       // Sync tags: add new ones, remove deleted ones
@@ -119,6 +122,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   const handleCancelEdit = () => {
     setEditDescription(picture.description || "");
     setEditTags((picture.tags || []).map(t => t.name));
+    setEditFrame(picture.frame || 'none');
     setEditing(false);
   };
 
@@ -142,11 +146,11 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   return (
     <>
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden hover:border-zinc-700 transition-colors">
-        <div className="relative group">
+        <div className={`relative group ${frame.wrapperClass}`}>
           <img
             src={picture.thumbnail_url || ""}
             alt={picture.description || "Photo"}
-            className="w-full h-64 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+            className={`cursor-pointer hover:opacity-80 transition-opacity ${frame.imageClass}`}
             onClick={() => setShowFullSize(true)}
             loading="lazy"
           />
@@ -190,6 +194,21 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
               />
               <div className="mb-2">
                 <TagInput value={editTags} onChange={setEditTags} />
+              </div>
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {FRAMES.map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setEditFrame(f.id)}
+                    className={`px-2 py-1 text-xs rounded border font-light transition-colors ${
+                      editFrame === f.id
+                        ? 'border-zinc-400 text-zinc-100'
+                        : 'border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
               <div className="flex gap-2">
                 <button
@@ -289,12 +308,13 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
           className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowFullSize(false)}
         >
-          <img
-            src={picture.compressed_url || ""}
-            alt={picture.description || "Photo"}
-            className="max-w-full max-h-full object-contain"
-            onClick={e => e.stopPropagation()}
-          />
+          <div className={frame.modalWrapperClass} onClick={e => e.stopPropagation()}>
+            <img
+              src={picture.compressed_url || ""}
+              alt={picture.description || "Photo"}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
           <button
             onClick={() => setShowFullSize(false)}
             className="absolute top-6 right-6 text-zinc-400 text-4xl hover:text-zinc-200 transition-colors"
