@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { Picture, User } from "../types";
+import { TagInput } from "./TagInput";
 
 interface PictureCardProps {
   picture: Picture & {
@@ -48,7 +49,6 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   const [editing, setEditing] = useState(false);
   const [editDescription, setEditDescription] = useState(picture.description || "");
   const [editTags, setEditTags] = useState((picture.tags || []).map(t => t.name));
-  const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
 
   const isOwner = picture.user_id === currentUser.id;
@@ -119,19 +119,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   const handleCancelEdit = () => {
     setEditDescription(picture.description || "");
     setEditTags((picture.tags || []).map(t => t.name));
-    setTagInput("");
     setEditing(false);
-  };
-
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      const tag = tagInput.trim().toLowerCase();
-      if (tag && !editTags.includes(tag)) {
-        setEditTags([...editTags, tag]);
-      }
-      setTagInput("");
-    }
   };
 
   const handleDelete = async () => {
@@ -200,26 +188,9 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
                 className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200 font-light resize-none focus:outline-none focus:border-zinc-500 mb-2"
                 rows={2}
               />
-              <div className="flex flex-wrap gap-1 mb-2">
-                {editTags.map(tag => (
-                  <span key={tag} className="flex items-center gap-1 px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded border border-zinc-700 font-light">
-                    {tag}
-                    <button
-                      onClick={() => setEditTags(editTags.filter(t => t !== tag))}
-                      className="text-zinc-500 hover:text-zinc-200 leading-none"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+              <div className="mb-2">
+                <TagInput value={editTags} onChange={setEditTags} />
               </div>
-              <input
-                value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
-                onKeyDown={handleTagInputKeyDown}
-                placeholder="Add tag, press Enter..."
-                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-xs text-zinc-200 font-light focus:outline-none focus:border-zinc-500 mb-2"
-              />
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveEdit}

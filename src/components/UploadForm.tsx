@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { TagInput } from "./TagInput";
 
 interface UploadFormProps {
   onUploadComplete: () => void;
@@ -8,7 +9,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +55,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       const formData = new FormData();
       formData.append("file", file);
       if (description) formData.append("description", description);
-      if (tags) formData.append("tags", tags);
+      if (tags.length > 0) formData.append("tags", tags.join(","));
 
       const res = await fetch("/api/pictures/upload", {
         method: "POST",
@@ -71,7 +72,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       setFile(null);
       setPreview(null);
       setDescription("");
-      setTags("");
+      setTags([]);
       onUploadComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -131,16 +132,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
           <label className="block text-sm font-light text-zinc-300 mb-2">
             Tags (optional)
           </label>
-          <input
-            type="text"
-            value={tags}
-            onChange={e => setTags(e.target.value)}
-            className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg focus:outline-none focus:border-zinc-600 font-light placeholder:text-zinc-600"
-            placeholder="nature, sunset, beach (comma-separated)"
-          />
-          <p className="text-xs text-zinc-600 mt-2 font-light">
-            Separate multiple tags with commas
-          </p>
+          <TagInput value={tags} onChange={setTags} />
         </div>
 
         {/* Error */}
