@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { TagInput } from "./TagInput";
+import { FRAMES, getFrame } from "../frames";
 
 interface UploadFormProps {
   onUploadComplete: () => void;
@@ -10,6 +11,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [frame, setFrame] = useState("none");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +58,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       formData.append("file", file);
       if (description) formData.append("description", description);
       if (tags.length > 0) formData.append("tags", tags.join(","));
+      formData.append("frame", frame);
 
       const res = await fetch("/api/pictures/upload", {
         method: "POST",
@@ -73,6 +76,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       setPreview(null);
       setDescription("");
       setTags([]);
+      setFrame("none");
       onUploadComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -101,13 +105,38 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
         {/* Preview */}
         {preview && (
           <div className="mb-6">
-            <img
-              src={preview}
-              alt="Preview"
-              className="max-w-full h-auto rounded-lg max-h-96 mx-auto"
-            />
+            <div className={`inline-block mx-auto ${getFrame(frame).wrapperClass}`} style={{ display: 'block' }}>
+              <img
+                src={preview}
+                alt="Preview"
+                className="max-w-full h-auto rounded-sm max-h-80 mx-auto block"
+              />
+            </div>
           </div>
         )}
+
+        {/* Frame */}
+        <div className="mb-6">
+          <label className="block text-sm font-light text-zinc-300 mb-2">
+            Frame (optional)
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {FRAMES.map(f => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFrame(f.id)}
+                className={`px-3 py-1.5 text-sm rounded border font-light transition-colors ${
+                  frame === f.id
+                    ? 'border-zinc-400 text-zinc-100'
+                    : 'border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Description */}
         <div className="mb-6">

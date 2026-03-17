@@ -239,6 +239,9 @@ const server = serve({
           const file = formData.get("file") as File;
           const description = formData.get("description") as string | null;
           const tagsStr = formData.get("tags") as string | null;
+          const frameStr = formData.get("frame") as string | null;
+          const VALID_FRAMES = ['none', 'white', 'polaroid', 'dark', 'film'];
+          const frame = frameStr && VALID_FRAMES.includes(frameStr) ? frameStr : 'none';
 
           if (!file) {
             return new Response("No file provided", { status: 400 });
@@ -291,6 +294,7 @@ const server = serve({
             height: metadata.height,
             mimeType: file.type,
             description: description || undefined,
+            frame,
             cameraMake: metadata.cameraInfo.cameraMake,
             cameraModel: metadata.cameraInfo.cameraModel,
             lensModel: metadata.cameraInfo.lensModel,
@@ -834,8 +838,10 @@ const server = serve({
       async POST(req) {
         try {
           const user = requireAuth(req);
-          const body = await req.json() as { sessionId: string; description?: string };
-          const { sessionId, description } = body;
+          const body = await req.json() as { sessionId: string; description?: string; frame?: string };
+          const { sessionId, description, frame: frameParam } = body;
+          const VALID_FRAMES_GP = ['none', 'white', 'polaroid', 'dark', 'film'];
+          const frame = frameParam && VALID_FRAMES_GP.includes(frameParam) ? frameParam : 'none';
 
           if (!sessionId) {
             return new Response("sessionId required", { status: 400 });
@@ -884,6 +890,7 @@ const server = serve({
               height: metadata.height,
               mimeType: item.mediaFile.mimeType,
               description: description || undefined,
+              frame,
               cameraMake: metadata.cameraInfo.cameraMake ?? photoMeta?.cameraMake ?? null,
               cameraModel: metadata.cameraInfo.cameraModel ?? photoMeta?.cameraModel ?? null,
               lensModel: metadata.cameraInfo.lensModel,

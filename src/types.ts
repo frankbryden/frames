@@ -74,6 +74,7 @@ export interface PictureUploadMetadata {
   height: number;
   mimeType: string;
   description?: string;
+  frame?: string;
   cameraMake?: string | null;
   cameraModel?: string | null;
   lensModel?: string | null;

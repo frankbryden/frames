@@ -205,9 +205,9 @@ export function uploadPicture(metadata: PictureUploadMetadata): Picture {
     INSERT INTO pictures (
       user_id, original_r2_key, compressed_r2_key, thumbnail_r2_key,
       original_filename, original_size, compressed_size, width, height,
-      mime_type, description,
+      mime_type, description, frame,
       camera_make, camera_model, lens_model, f_number, exposure_time, iso, focal_length
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `);
 
@@ -223,6 +223,7 @@ export function uploadPicture(metadata: PictureUploadMetadata): Picture {
     metadata.height,
     metadata.mimeType,
     metadata.description || null,
+    metadata.frame || 'none',
     metadata.cameraMake ?? null,
     metadata.cameraModel ?? null,
     metadata.lensModel ?? null,

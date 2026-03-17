@@ -55,7 +55,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
 
   const isOwner = picture.user_id === currentUser.id;
   const hasCameraInfo = !!(picture.camera_make || picture.camera_model);
-  const frame = getFrame(picture.frame);
+  const frame = getFrame(editing ? editFrame : picture.frame);
 
   const handleLike = async (isLike: boolean) => {
     try {
@@ -305,14 +305,14 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
 
       {showFullSize && (
         <div
-          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-16"
           onClick={() => setShowFullSize(false)}
         >
           <div className={frame.modalWrapperClass} onClick={e => e.stopPropagation()}>
             <img
               src={picture.compressed_url || ""}
               alt={picture.description || "Photo"}
-              className="max-w-full max-h-full object-contain"
+              className="max-h-[70vh] max-w-[80vw] object-contain block"
             />
           </div>
           <button

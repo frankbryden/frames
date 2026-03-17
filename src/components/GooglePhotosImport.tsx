@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { FRAMES } from "../frames";
 
 interface PickerMediaItem {
   id: string;
@@ -21,6 +22,7 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
   const [items, setItems] = useState<PickerMediaItem[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [importedCount, setImportedCount] = useState(0);
+  const [frame, setFrame] = useState("none");
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const popupRef = useRef<Window | null>(null);
@@ -98,7 +100,7 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId, frame }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data: { imported: number } = await res.json();
@@ -160,6 +162,25 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
         </div>
 
         {error && <div className="text-red-400 text-sm mb-6">{error}</div>}
+
+        <div className="mb-6">
+          <p className="text-sm font-light text-zinc-400 mb-2">Frame</p>
+          <div className="flex gap-2 flex-wrap">
+            {FRAMES.map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFrame(f.id)}
+                className={`px-3 py-1.5 text-sm rounded border font-light transition-colors ${
+                  frame === f.id
+                    ? 'border-zinc-400 text-zinc-100'
+                    : 'border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
           {items.map((item) => (
