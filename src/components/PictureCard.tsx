@@ -45,6 +45,11 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   const [localLikeCount, setLocalLikeCount] = useState(picture.like_count || 0);
   const [localDislikeCount, setLocalDislikeCount] = useState(picture.dislike_count || 0);
   const [localUserLike, setLocalUserLike] = useState(picture.user_like);
+  const [editing, setEditing] = useState(false);
+  const [editDescription, setEditDescription] = useState(picture.description || "");
+  const [editTags, setEditTags] = useState((picture.tags || []).map(t => t.name));
+  const [tagInput, setTagInput] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const isOwner = picture.user_id === currentUser.id;
   const hasCameraInfo = !!(picture.camera_make || picture.camera_model);
@@ -66,6 +71,66 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
       }
     } catch (error) {
       console.error("Failed to toggle like:", error);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      // Update description
+      await fetch(`/api/pictures/${picture.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: editDescription }),
+      });
+
+      // Sync tags: add new ones, remove deleted ones
+      const originalTags = (picture.tags || []).map(t => t.name);
+      const tagsToAdd = editTags.filter(t => !originalTags.includes(t));
+      const tagsToRemove = originalTags.filter(t => !editTags.includes(t));
+
+      if (tagsToAdd.length > 0) {
+        await fetch(`/api/pictures/${picture.id}/tags`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tags: tagsToAdd }),
+        });
+      }
+      if (tagsToRemove.length > 0) {
+        await fetch(`/api/pictures/${picture.id}/tags`, {
+          method: "DELETE",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tags: tagsToRemove }),
+        });
+      }
+
+      setEditing(false);
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error("Failed to save edits:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditDescription(picture.description || "");
+    setEditTags((picture.tags || []).map(t => t.name));
+    setTagInput("");
+    setEditing(false);
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const tag = tagInput.trim().toLowerCase();
+      if (tag && !editTags.includes(tag)) {
+        setEditTags([...editTags, tag]);
+      }
+      setTagInput("");
     }
   };
 
@@ -126,21 +191,70 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
             </span>
           </div>
 
-          {picture.description && (
-            <p className="text-zinc-400 text-sm font-light mb-3">{picture.description}</p>
-          )}
-
-          {picture.tags && picture.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-3">
-              {picture.tags.map(tag => (
-                <span
-                  key={tag.id}
-                  className="px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded border border-zinc-700 font-light"
+          {editing ? (
+            <div className="mb-3">
+              <textarea
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+                placeholder="Add a description..."
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-200 font-light resize-none focus:outline-none focus:border-zinc-500 mb-2"
+                rows={2}
+              />
+              <div className="flex flex-wrap gap-1 mb-2">
+                {editTags.map(tag => (
+                  <span key={tag} className="flex items-center gap-1 px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded border border-zinc-700 font-light">
+                    {tag}
+                    <button
+                      onClick={() => setEditTags(editTags.filter(t => t !== tag))}
+                      className="text-zinc-500 hover:text-zinc-200 leading-none"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={handleTagInputKeyDown}
+                placeholder="Add tag, press Enter..."
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-xs text-zinc-200 font-light focus:outline-none focus:border-zinc-500 mb-2"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="text-sm text-zinc-200 hover:text-white font-light transition-colors disabled:opacity-50"
                 >
-                  {tag.name}
-                </span>
-              ))}
+                  {saving ? "Saving..." : "Save"}
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              {picture.description && (
+                <p className="text-zinc-400 text-sm font-light mb-3">{picture.description}</p>
+              )}
+
+              {picture.tags && picture.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {picture.tags.map(tag => (
+                    <span
+                      key={tag.id}
+                      className="px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded border border-zinc-700 font-light"
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex items-center justify-between">
@@ -179,13 +293,21 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
               </button>
             </div>
 
-            {isOwner && (
-              <button
-                onClick={handleDelete}
-                className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"
-              >
-                Delete
-              </button>
+            {isOwner && !editing && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setEditing(true)}
+                  className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             )}
           </div>
         </div>
