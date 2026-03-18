@@ -664,8 +664,10 @@ const server = serve({
           const url = new URL(req.url);
           const offset = parseInt(url.searchParams.get("offset") || "0");
           const limit = parseInt(url.searchParams.get("limit") || "20");
+          const tagsParam = url.searchParams.get("tags");
+          const tags = tagsParam ? tagsParam.split(",").filter(Boolean) : undefined;
 
-          const pictures = getTimeline(user.id, offset, limit);
+          const pictures = getTimeline(user.id, offset, limit, tags);
 
           const enrichedPictures = await Promise.all(
             pictures.map(async (picture) => {

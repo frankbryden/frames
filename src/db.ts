@@ -304,16 +304,32 @@ export function getFeed(offset: number = 0, limit: number = 20): Picture[] {
   return stmt.all(limit, offset) as Picture[];
 }
 
-export function getTimeline(userId: number, offset: number = 0, limit: number = 20): Picture[] {
-  const stmt = db.prepare(`
-    SELECT p.*, u.name as user_name, u.avatar_url as user_avatar
+export function getTimeline(userId: number, offset: number = 0, limit: number = 20, tags?: string[]): Picture[] {
+  let query = `
+    SELECT DISTINCT p.*, u.name as user_name, u.avatar_url as user_avatar
     FROM pictures p
     JOIN users u ON p.user_id = u.id
-    WHERE p.user_id = ?
-    ORDER BY p.uploaded_at ASC
-    LIMIT ? OFFSET ?
-  `);
-  return stmt.all(userId, limit, offset) as Picture[];
+  `;
+
+  const params: any[] = [];
+
+  if (tags && tags.length > 0) {
+    query += `
+      JOIN picture_tags pt ON p.id = pt.picture_id
+      JOIN tags t ON pt.tag_id = t.id
+    `;
+    const tagPlaceholders = tags.map(() => "?").join(",");
+    query += ` WHERE p.user_id = ? AND t.name IN (${tagPlaceholders})`;
+    params.push(userId, ...tags);
+  } else {
+    query += " WHERE p.user_id = ?";
+    params.push(userId);
+  }
+
+  query += " ORDER BY p.uploaded_at ASC LIMIT ? OFFSET ?";
+  params.push(limit, offset);
+
+  return db.prepare(query).all(...params) as Picture[];
 }
 
 export function updatePictureDescription(pictureId: number, description: string): void {
