@@ -17,11 +17,7 @@ export function UserFeed({ user, onUserClick }: UserFeedProps) {
     try {
       setLoading(true);
       const currentOffset = reset ? 0 : offset;
-
-      const res = await fetch(`/api/feed?offset=${currentOffset}&limit=20`, {
-        credentials: "include",
-      });
-
+      const res = await fetch(`/api/feed?offset=${currentOffset}&limit=20`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setPictures(prev => (reset ? data : [...prev, ...data]));
@@ -35,42 +31,34 @@ export function UserFeed({ user, onUserClick }: UserFeedProps) {
     }
   };
 
-  useEffect(() => {
-    loadPictures(true);
-  }, []);
-
-  const handleUpdate = () => {
-    loadPictures(true);
-  };
+  useEffect(() => { loadPictures(true); }, []);
 
   return (
     <div>
       {loading && pictures.length === 0 ? (
-        <div className="text-center py-20 text-zinc-500 font-light">Loading...</div>
+        <div className="text-center py-20 text-slate-400 font-light">Loading...</div>
       ) : pictures.length === 0 ? (
-        <div className="text-center py-20 text-zinc-500 font-light">
-          No pictures yet. Upload your first photo!
-        </div>
+        <div className="text-center py-20 text-slate-400 font-light">No pictures yet. Upload your first photo!</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
             {pictures.map(picture => (
-              <PictureCard
-                key={picture.id}
-                picture={picture}
-                currentUser={user}
-                onUpdate={handleUpdate}
-                onUserClick={onUserClick}
-              />
+              <div key={picture.id} className="break-inside-avoid mb-6">
+                <PictureCard
+                  picture={picture}
+                  currentUser={user}
+                  onUpdate={() => loadPictures(true)}
+                  onUserClick={onUserClick}
+                />
+              </div>
             ))}
           </div>
-
           {hasMore && (
             <div className="text-center mt-10">
               <button
                 onClick={() => loadPictures(false)}
                 disabled={loading}
-                className="px-6 py-2 bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg hover:bg-zinc-750 hover:border-zinc-600 disabled:opacity-50 font-light transition-all"
+                className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 font-light transition-all shadow-sm"
               >
                 {loading ? "Loading..." : "Load More"}
               </button>

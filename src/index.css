@@ -9,7 +9,7 @@
 
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    @apply bg-zinc-950 text-zinc-100 antialiased;
+    @apply bg-slate-100 text-slate-900 antialiased;
   }
 
   #root {
@@ -28,14 +28,14 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-zinc-900;
+    @apply bg-slate-100;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-zinc-700 rounded;
+    @apply bg-slate-300 rounded;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-zinc-600;
+    @apply bg-slate-400;
   }
 }

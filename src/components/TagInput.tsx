@@ -30,10 +30,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
   }, []);
 
   const normalised = input.trim().toLowerCase();
-
-  const suggestions = allTags.filter(
-    t => t.name.includes(normalised) && !value.includes(t.name)
-  );
+  const suggestions = allTags.filter(t => t.name.includes(normalised) && !value.includes(t.name));
   const inputIsNew = normalised.length > 0 && !allTags.some(t => t.name === normalised);
 
   const addTag = (tag: string) => {
@@ -58,54 +55,49 @@ export function TagInput({ value, onChange }: TagInputProps) {
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex flex-wrap gap-1 p-2 bg-zinc-800 border border-zinc-700 rounded focus-within:border-zinc-500 min-h-[2.5rem]">
+      <div className="flex flex-wrap gap-1 p-2 bg-slate-50 border border-slate-200 rounded focus-within:border-slate-400 min-h-[2.5rem]">
         {value.map(tag => (
           <button
             key={tag}
             type="button"
             onClick={() => removeTag(tag)}
-            className="flex items-center gap-1 px-2 py-0.5 bg-zinc-700 text-zinc-300 text-xs rounded font-light hover:bg-zinc-600 hover:text-zinc-100 transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 bg-slate-200 text-slate-600 text-xs rounded font-light hover:bg-slate-300 hover:text-slate-800 transition-colors"
           >
             {tag}
-            <span className="text-zinc-500 hover:text-zinc-200 leading-none text-sm">×</span>
+            <span className="text-slate-400 hover:text-slate-700 leading-none text-sm">×</span>
           </button>
         ))}
         <input
           value={input}
-          onChange={e => {
-            setInput(e.target.value);
-            setDropdownOpen(true);
-          }}
+          onChange={e => { setInput(e.target.value); setDropdownOpen(true); }}
           onFocus={() => normalised.length > 0 && setDropdownOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={value.length === 0 ? "Add tags..." : ""}
-          className="flex-1 min-w-[6rem] bg-transparent text-xs text-zinc-200 font-light focus:outline-none placeholder:text-zinc-600"
+          className="flex-1 min-w-[6rem] bg-transparent text-xs text-slate-700 font-light focus:outline-none placeholder:text-slate-400"
         />
       </div>
 
       {showDropdown && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded shadow-xl overflow-hidden">
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded shadow-lg overflow-hidden">
           {suggestions.map(tag => (
             <button
               key={tag.id}
               type="button"
               onMouseDown={e => { e.preventDefault(); addTag(tag.name); }}
-              className="w-full text-left px-3 py-2 text-xs text-zinc-300 font-light hover:bg-zinc-800 flex items-center justify-between"
+              className="w-full text-left px-3 py-2 text-xs text-slate-600 font-light hover:bg-slate-50 flex items-center justify-between"
             >
               <span>{tag.name}</span>
-              {tag.count != null && (
-                <span className="text-zinc-600">{tag.count}</span>
-              )}
+              {tag.count != null && <span className="text-slate-400">{tag.count}</span>}
             </button>
           ))}
           {inputIsNew && (
             <button
               type="button"
               onMouseDown={e => { e.preventDefault(); addTag(normalised); }}
-              className="w-full text-left px-3 py-2 text-xs text-zinc-300 font-light hover:bg-zinc-800 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-xs text-slate-600 font-light hover:bg-slate-50 flex items-center gap-2"
             >
               <span>{normalised}</span>
-              <span className="text-zinc-500">New Tag</span>
+              <span className="text-slate-400">New Tag</span>
             </button>
           )}
         </div>

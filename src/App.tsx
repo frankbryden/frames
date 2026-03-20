@@ -68,8 +68,8 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <div className="text-zinc-400 font-light">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="text-slate-500 font-light">Loading...</div>
       </div>
     );
   }
@@ -79,7 +79,7 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-slate-100">
       <Header
         user={user}
         view={view}

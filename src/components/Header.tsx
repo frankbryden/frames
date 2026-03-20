@@ -19,57 +19,27 @@ export function Header({ user, view, setView, onProfileClick }: HeaderProps) {
   };
 
   return (
-    <header className="bg-zinc-900 border-b border-zinc-800">
+    <header className="bg-white border-b border-slate-200">
       <div className="container mx-auto px-6 py-5 max-w-7xl">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-light tracking-tight text-zinc-50">Frames</h1>
+          <h1 className="text-2xl font-extralight tracking-widest text-slate-900">Frames</h1>
 
           <nav className="flex items-center gap-2">
-            <button
-              onClick={() => setView("feed")}
-              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
-                view === "feed"
-                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-              }`}
-            >
-              Feed
-            </button>
+            {(["feed", "timeline", "upload", "import"] as View[]).map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-5 py-2 rounded-lg font-normal text-sm transition-all capitalize ${
+                  view === v
+                    ? "bg-slate-100 text-slate-900 border border-slate-200"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
 
-            <button
-              onClick={() => setView("timeline")}
-              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
-                view === "timeline"
-                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-              }`}
-            >
-              Timeline
-            </button>
-
-            <button
-              onClick={() => setView("upload")}
-              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
-                view === "upload"
-                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-              }`}
-            >
-              Upload
-            </button>
-
-            <button
-              onClick={() => setView("import")}
-              className={`px-5 py-2 rounded-lg font-normal text-sm transition-all ${
-                view === "import"
-                  ? "bg-zinc-800 text-zinc-50 border border-zinc-700"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-              }`}
-            >
-              Import
-            </button>
-
-            <div className="flex items-center gap-3 ml-6 pl-6 border-l border-zinc-800">
+            <div className="flex items-center gap-3 ml-6 pl-6 border-l border-slate-200">
               <button
                 onClick={onProfileClick}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity"
@@ -78,14 +48,14 @@ export function Header({ user, view, setView, onProfileClick }: HeaderProps) {
                   <img
                     src={user.avatar_url}
                     alt={user.name}
-                    className="w-8 h-8 rounded-full ring-1 ring-zinc-700"
+                    className="w-8 h-8 rounded-full ring-1 ring-slate-200"
                   />
                 )}
-                <span className="text-sm text-zinc-300 font-light">{user.name}</span>
+                <span className="text-sm text-slate-700 font-light">{user.name}</span>
               </button>
               <button
                 onClick={handleLogout}
-                className="text-sm text-zinc-500 hover:text-zinc-300 font-light transition-colors"
+                className="text-sm text-slate-400 hover:text-slate-700 font-light transition-colors"
               >
                 Logout
               </button>
