@@ -840,8 +840,8 @@ const server = serve({
       async POST(req) {
         try {
           const user = requireAuth(req);
-          const body = await req.json() as { sessionId: string; description?: string; frame?: string };
-          const { sessionId, description, frame: frameParam } = body;
+          const body = await req.json() as { sessionId: string; description?: string; frame?: string; excludeIds?: string[] };
+          const { sessionId, description, frame: frameParam, excludeIds } = body;
           const VALID_FRAMES_GP = ['none', 'white', 'polaroid', 'dark', 'film'];
           const frame = frameParam && VALID_FRAMES_GP.includes(frameParam) ? frameParam : 'none';
 
@@ -850,7 +850,9 @@ const server = serve({
           }
 
           const accessToken = await getValidToken(user.id);
-          const items = await listPickerMediaItems(accessToken, sessionId);
+          const allItems = await listPickerMediaItems(accessToken, sessionId);
+          const excludeSet = new Set(excludeIds ?? []);
+          const items = allItems.filter(i => !excludeSet.has(i.id));
           const imported: number[] = [];
 
           for (const item of items) {

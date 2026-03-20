@@ -20,6 +20,7 @@ interface Props {
 export function GooglePhotosImport({ onImportComplete }: Props) {
   const [stage, setStage] = useState<Stage>("idle");
   const [items, setItems] = useState<PickerMediaItem[]>([]);
+  const [deselectedIds, setDeselectedIds] = useState<Set<string>>(new Set());
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [importedCount, setImportedCount] = useState(0);
   const [frame, setFrame] = useState("none");
@@ -79,15 +80,27 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
     setSessionId(null);
   };
 
+  const toggleDeselected = (id: string) => {
+    setDeselectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedCount = items.length - deselectedIds.size;
+
   const handleImport = async () => {
     if (!sessionId) return;
     setStage("importing");
     try {
+      const excludeIds = deselectedIds.size > 0 ? Array.from(deselectedIds) : undefined;
       const res = await fetch("/api/google-photos/import", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, frame }),
+        body: JSON.stringify({ sessionId, frame, excludeIds }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data: { imported: number } = await res.json();
@@ -117,7 +130,7 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
   if (stage === "importing") {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <div className="text-slate-500 font-light">Importing {items.length} photo{items.length !== 1 ? "s" : ""}…</div>
+        <div className="text-slate-500 font-light">Importing {selectedCount} photo{selectedCount !== 1 ? "s" : ""}…</div>
         <div className="w-48 h-0.5 bg-slate-200 rounded-full overflow-hidden">
           <div className="h-full bg-slate-400 rounded-full animate-pulse w-full" />
         </div>
@@ -130,20 +143,21 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
       <div>
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl font-light text-slate-800">
-            {items.length} photo{items.length !== 1 ? "s" : ""} selected
+            {selectedCount} of {items.length} photo{items.length !== 1 ? "s" : ""} selected
           </h2>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setStage("idle"); setSessionId(null); setItems([]); }}
+              onClick={() => { setStage("idle"); setSessionId(null); setItems([]); setDeselectedIds(new Set()); }}
               className="px-5 py-2 text-slate-400 hover:text-slate-700 text-sm transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleImport}
-              className="px-5 py-2 bg-slate-800 text-white rounded-lg text-sm font-normal hover:bg-slate-700 transition-colors"
+              disabled={selectedCount === 0}
+              className="px-5 py-2 bg-slate-800 text-white rounded-lg text-sm font-normal hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Import {items.length} photo{items.length !== 1 ? "s" : ""}
+              Import {selectedCount} photo{selectedCount !== 1 ? "s" : ""}
             </button>
           </div>
         </div>
@@ -170,17 +184,33 @@ export function GooglePhotosImport({ onImportComplete }: Props) {
         </div>
 
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-          {items.map(item => (
-            <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden bg-slate-200">
-              <img
-                src={`/api/google-photos/thumbnail?url=${encodeURIComponent(item.mediaFile.baseUrl)}`}
-                alt={item.mediaFile.filename}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-          ))}
+          {items.map(item => {
+            const deselected = deselectedIds.has(item.id);
+            return (
+              <button
+                key={item.id}
+                onClick={() => toggleDeselected(item.id)}
+                className={`relative aspect-square rounded-lg overflow-hidden bg-slate-200 cursor-pointer focus:outline-none transition-opacity ${deselected ? "opacity-30" : "opacity-100"}`}
+              >
+                <img
+                  src={`/api/google-photos/thumbnail?url=${encodeURIComponent(item.mediaFile.baseUrl)}`}
+                  alt={item.mediaFile.filename}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {!deselected && (
+                  <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors" />
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {deselectedIds.size > 0 && (
+          <p className="text-xs text-slate-400 mt-4 text-center">
+            {deselectedIds.size} photo{deselectedIds.size !== 1 ? "s" : ""} excluded — click to re-add
+          </p>
+        )}
       </div>
     );
   }
