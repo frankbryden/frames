@@ -32,6 +32,7 @@ export interface Picture {
   like_count?: number;
   dislike_count?: number;
   user_like?: boolean | null;
+  albums?: AlbumRef[];
   camera_make: string | null;
   camera_model: string | null;
   lens_model: string | null;
@@ -39,6 +40,21 @@ export interface Picture {
   exposure_time: string | null;
   iso: number | null;
   focal_length: number | null;
+}
+
+export interface AlbumRef {
+  id: number;
+  title: string;
+}
+
+export interface Album {
+  id: number;
+  user_id: number;
+  title: string;
+  cover_picture_id: number | null;
+  cover_thumbnail_url?: string;
+  created_at: string;
+  picture_count?: number;
 }
 
 export interface Tag {

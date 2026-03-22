@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import type { User, Picture, Tag, Like, Session, PictureUploadMetadata, GetPicturesFilters, CameraInfo } from "./types";
+import type { User, Picture, Tag, Like, Session, PictureUploadMetadata, GetPicturesFilters, CameraInfo, Album, AlbumRef } from "./types";
 
 const dbPath = process.env.DATABASE_PATH || "./data/photos.db";
 const db = new Database(dbPath);
@@ -457,6 +457,102 @@ export function getUserLike(userId: number, pictureId: number): boolean | null {
   const result = stmt.get(userId, pictureId) as { is_like: number } | null;
   if (result === null) return null;
   return result.is_like === 1;
+}
+
+// Album tables
+db.exec(`
+  CREATE TABLE IF NOT EXISTS albums (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    cover_picture_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (cover_picture_id) REFERENCES pictures(id) ON DELETE SET NULL
+  )
+`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_albums_user_id ON albums(user_id)`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS album_pictures (
+    album_id INTEGER NOT NULL,
+    picture_id INTEGER NOT NULL,
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (album_id, picture_id),
+    FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
+    FOREIGN KEY (picture_id) REFERENCES pictures(id) ON DELETE CASCADE
+  )
+`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_album_pictures_album_id ON album_pictures(album_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_album_pictures_picture_id ON album_pictures(picture_id)`);
+
+// Album functions
+export function createAlbum(userId: number, title: string): Album {
+  const stmt = db.prepare(
+    "INSERT INTO albums (user_id, title) VALUES (?, ?) RETURNING *"
+  );
+  return stmt.get(userId, title) as Album;
+}
+
+export function getAlbumsByUser(userId: number): (Album & { cover_thumbnail_r2_key: string | null })[] {
+  const stmt = db.prepare(`
+    SELECT a.*, p.thumbnail_r2_key as cover_thumbnail_r2_key
+    FROM albums a
+    LEFT JOIN pictures p ON a.cover_picture_id = p.id
+    WHERE a.user_id = ?
+    ORDER BY a.created_at DESC
+  `);
+  return stmt.all(userId) as (Album & { cover_thumbnail_r2_key: string | null })[];
+}
+
+export function getAlbumById(albumId: number): Album | null {
+  const stmt = db.prepare("SELECT * FROM albums WHERE id = ?");
+  return stmt.get(albumId) as Album | null;
+}
+
+export function updateAlbum(albumId: number, updates: { title?: string; coverPictureId?: number | null }): void {
+  if (updates.title !== undefined) {
+    db.prepare("UPDATE albums SET title = ? WHERE id = ?").run(updates.title, albumId);
+  }
+  if (updates.coverPictureId !== undefined) {
+    db.prepare("UPDATE albums SET cover_picture_id = ? WHERE id = ?").run(updates.coverPictureId, albumId);
+  }
+}
+
+export function deleteAlbum(albumId: number): void {
+  db.prepare("DELETE FROM albums WHERE id = ?").run(albumId);
+}
+
+export function getAlbumPictures(albumId: number, offset: number = 0, limit: number = 20): Picture[] {
+  const stmt = db.prepare(`
+    SELECT p.*, u.name as user_name, u.avatar_url as user_avatar
+    FROM pictures p
+    JOIN album_pictures ap ON p.id = ap.picture_id
+    JOIN users u ON p.user_id = u.id
+    WHERE ap.album_id = ?
+    ORDER BY ap.added_at ASC
+    LIMIT ? OFFSET ?
+  `);
+  return stmt.all(albumId, limit, offset) as Picture[];
+}
+
+export function addPictureToAlbum(albumId: number, pictureId: number): void {
+  db.prepare("INSERT OR IGNORE INTO album_pictures (album_id, picture_id) VALUES (?, ?)").run(albumId, pictureId);
+}
+
+export function removePictureFromAlbum(albumId: number, pictureId: number): void {
+  db.prepare("DELETE FROM album_pictures WHERE album_id = ? AND picture_id = ?").run(albumId, pictureId);
+}
+
+export function getPictureAlbums(pictureId: number): AlbumRef[] {
+  const stmt = db.prepare(`
+    SELECT a.id, a.title
+    FROM albums a
+    JOIN album_pictures ap ON a.id = ap.album_id
+    WHERE ap.picture_id = ?
+    ORDER BY a.created_at DESC
+  `);
+  return stmt.all(pictureId) as AlbumRef[];
 }
 
 console.log(`Database initialized at ${dbPath}`);

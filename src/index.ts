@@ -57,6 +57,15 @@ import {
   getUserById,
   getUserCameras,
   storeGoogleTokens,
+  createAlbum,
+  getAlbumsByUser,
+  getAlbumById,
+  updateAlbum,
+  deleteAlbum,
+  getAlbumPictures,
+  addPictureToAlbum,
+  removePictureFromAlbum,
+  getPictureAlbums,
 } from "./db";
 import {
   getValidToken,
@@ -625,13 +634,14 @@ const server = serve({
 
           const enrichedPictures = await Promise.all(
             pictures.map(async (picture) => {
-              const [compressedUrl, thumbnailUrl, tags, counts, userLike] =
+              const [compressedUrl, thumbnailUrl, tags, counts, userLike, albums] =
                 await Promise.all([
                   getSignedUrl(picture.compressed_r2_key),
                   getSignedUrl(picture.thumbnail_r2_key),
                   getPictureTags(picture.id),
                   getLikeCounts(picture.id),
                   getUserLike(user.id, picture.id),
+                  getPictureAlbums(picture.id),
                 ]);
 
               return {
@@ -642,6 +652,7 @@ const server = serve({
                 like_count: counts.likes,
                 dislike_count: counts.dislikes,
                 user_like: userLike,
+                albums,
               };
             }),
           );
@@ -672,23 +683,25 @@ const server = serve({
 
           const enrichedPictures = await Promise.all(
             pictures.map(async (picture) => {
-              const [compressedUrl, thumbnailUrl, tags, counts, userLike] =
+              const [compressedUrl, thumbnailUrl, pictureTags, counts, userLike, albums] =
                 await Promise.all([
                   getSignedUrl(picture.compressed_r2_key),
                   getSignedUrl(picture.thumbnail_r2_key),
                   getPictureTags(picture.id),
                   getLikeCounts(picture.id),
                   getUserLike(user.id, picture.id),
+                  getPictureAlbums(picture.id),
                 ]);
 
               return {
                 ...picture,
                 compressed_url: compressedUrl,
                 thumbnail_url: thumbnailUrl,
-                tags,
+                tags: pictureTags,
                 like_count: counts.likes,
                 dislike_count: counts.dislikes,
                 user_like: userLike,
+                albums,
               };
             }),
           );
@@ -715,6 +728,32 @@ const server = serve({
             return new Response("Unauthorized", { status: 401 });
           }
           return new Response("Failed to fetch tags", { status: 500 });
+        }
+      },
+    },
+
+    // Get albums for a user (must come before /api/users/:id)
+    "/api/users/:id/albums": {
+      async GET(req) {
+        try {
+          requireAuth(req);
+          const userId = parseInt(req.params.id);
+          const albums = getAlbumsByUser(userId);
+          const enriched = await Promise.all(
+            albums.map(async (album) => ({
+              ...album,
+              cover_thumbnail_url: album.cover_thumbnail_r2_key
+                ? await getSignedUrl(album.cover_thumbnail_r2_key)
+                : null,
+              cover_thumbnail_r2_key: undefined,
+            }))
+          );
+          return Response.json(enriched);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to fetch albums", { status: 500 });
         }
       },
     },
@@ -750,6 +789,173 @@ const server = serve({
             return new Response("Unauthorized", { status: 401 });
           }
           return new Response("Failed to fetch user", { status: 500 });
+        }
+      },
+    },
+
+    // Album CRUD
+    "/api/albums": {
+      async POST(req) {
+        try {
+          const user = requireAuth(req);
+          const body = await req.json();
+          const { title } = body;
+          if (!title || typeof title !== "string" || !title.trim()) {
+            return new Response("Album title is required", { status: 400 });
+          }
+          const album = createAlbum(user.id, title.trim());
+          return Response.json(album);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to create album", { status: 500 });
+        }
+      },
+    },
+
+    "/api/albums/:id": {
+      async GET(req) {
+        try {
+          requireAuth(req);
+          const albumId = parseInt(req.params.id);
+          const album = getAlbumById(albumId);
+          if (!album) return new Response("Album not found", { status: 404 });
+          return Response.json(album);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to fetch album", { status: 500 });
+        }
+      },
+
+      async PATCH(req) {
+        try {
+          const user = requireAuth(req);
+          const albumId = parseInt(req.params.id);
+          const album = getAlbumById(albumId);
+          if (!album) return new Response("Album not found", { status: 404 });
+          if (album.user_id !== user.id) return new Response("Forbidden", { status: 403 });
+
+          const body = await req.json();
+          const { title, coverPictureId } = body;
+          updateAlbum(albumId, {
+            title: typeof title === "string" ? title.trim() : undefined,
+            coverPictureId: coverPictureId !== undefined ? coverPictureId : undefined,
+          });
+          return Response.json({ success: true });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to update album", { status: 500 });
+        }
+      },
+
+      async DELETE(req) {
+        try {
+          const user = requireAuth(req);
+          const albumId = parseInt(req.params.id);
+          const album = getAlbumById(albumId);
+          if (!album) return new Response("Album not found", { status: 404 });
+          if (album.user_id !== user.id) return new Response("Forbidden", { status: 403 });
+          deleteAlbum(albumId);
+          return Response.json({ success: true });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to delete album", { status: 500 });
+        }
+      },
+    },
+
+    "/api/albums/:id/pictures": {
+      async GET(req) {
+        try {
+          const user = requireAuth(req);
+          const albumId = parseInt(req.params.id);
+          const album = getAlbumById(albumId);
+          if (!album) return new Response("Album not found", { status: 404 });
+
+          const url = new URL(req.url);
+          const offset = parseInt(url.searchParams.get("offset") || "0");
+          const limit = parseInt(url.searchParams.get("limit") || "20");
+
+          const pictures = getAlbumPictures(albumId, offset, limit);
+          const enrichedPictures = await Promise.all(
+            pictures.map(async (picture) => {
+              const [compressedUrl, thumbnailUrl, tags, counts, userLike, albums] =
+                await Promise.all([
+                  getSignedUrl(picture.compressed_r2_key),
+                  getSignedUrl(picture.thumbnail_r2_key),
+                  getPictureTags(picture.id),
+                  getLikeCounts(picture.id),
+                  getUserLike(user.id, picture.id),
+                  getPictureAlbums(picture.id),
+                ]);
+              return {
+                ...picture,
+                compressed_url: compressedUrl,
+                thumbnail_url: thumbnailUrl,
+                tags,
+                like_count: counts.likes,
+                dislike_count: counts.dislikes,
+                user_like: userLike,
+                albums,
+              };
+            }),
+          );
+          return Response.json(enrichedPictures);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to fetch album pictures", { status: 500 });
+        }
+      },
+
+      async POST(req) {
+        try {
+          const user = requireAuth(req);
+          const albumId = parseInt(req.params.id);
+          const album = getAlbumById(albumId);
+          if (!album) return new Response("Album not found", { status: 404 });
+          if (album.user_id !== user.id) return new Response("Forbidden", { status: 403 });
+
+          const body = await req.json();
+          const { pictureId } = body;
+          if (!pictureId || typeof pictureId !== "number") {
+            return new Response("pictureId is required", { status: 400 });
+          }
+          addPictureToAlbum(albumId, pictureId);
+          return Response.json({ success: true });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to add picture to album", { status: 500 });
+        }
+      },
+    },
+
+    "/api/albums/:id/pictures/:pictureId": {
+      async DELETE(req) {
+        try {
+          const user = requireAuth(req);
+          const albumId = parseInt(req.params.id);
+          const pictureId = parseInt(req.params.pictureId);
+          const album = getAlbumById(albumId);
+          if (!album) return new Response("Album not found", { status: 404 });
+          if (album.user_id !== user.id) return new Response("Forbidden", { status: 403 });
+          removePictureFromAlbum(albumId, pictureId);
+          return Response.json({ success: true });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to remove picture from album", { status: 500 });
         }
       },
     },
