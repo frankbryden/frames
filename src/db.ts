@@ -62,6 +62,9 @@ for (const sql of exifColumns) {
   try { db.exec(sql); } catch { /* column already exists */ }
 }
 
+// View count migration — idempotent
+try { db.exec("ALTER TABLE pictures ADD COLUMN view_count INTEGER DEFAULT 0"); } catch { /* column already exists */ }
+
 // Google Photos token migration — idempotent
 const tokenColumns = [
   "ALTER TABLE users ADD COLUMN google_access_token TEXT",
@@ -450,6 +453,10 @@ export function getLikeCounts(pictureId: number): { likes: number; dislikes: num
     likes: result.likes || 0,
     dislikes: result.dislikes || 0,
   };
+}
+
+export function incrementViewCount(pictureId: number): void {
+  db.prepare("UPDATE pictures SET view_count = view_count + 1 WHERE id = ?").run(pictureId);
 }
 
 export function getUserLike(userId: number, pictureId: number): boolean | null {

@@ -234,7 +234,10 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
             src={picture.thumbnail_url || ""}
             alt={picture.description || "Photo"}
             className={`cursor-pointer hover:opacity-80 transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'} ${frame.imageClass}`}
-            onClick={() => setShowFullSize(true)}
+            onClick={() => {
+              setShowFullSize(true);
+              fetch(`/api/pictures/${picture.id}/view`, { method: "POST", credentials: "include" }).catch(() => {});
+            }}
             onLoad={() => setImageLoaded(true)}
             loading="lazy"
           />

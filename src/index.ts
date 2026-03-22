@@ -53,6 +53,7 @@ import {
   toggleLike,
   getLikeCounts,
   getUserLike,
+  incrementViewCount,
   cleanupExpiredSessions,
   getUserById,
   getUserCameras,
@@ -616,6 +617,23 @@ const server = serve({
             return new Response("Unauthorized", { status: 401 });
           }
           return new Response("Failed to toggle like", { status: 500 });
+        }
+      },
+    },
+
+    // Track picture view
+    "/api/pictures/:id/view": {
+      async POST(req) {
+        try {
+          requireAuth(req);
+          const pictureId = parseInt(req.params.id);
+          incrementViewCount(pictureId);
+          return Response.json({ success: true });
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to record view", { status: 500 });
         }
       },
     },

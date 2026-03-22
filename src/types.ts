@@ -29,6 +29,7 @@ export interface Picture {
   uploaded_at: string;
   taken_at: string | null;
   tags?: Tag[];
+  view_count?: number;
   like_count?: number;
   dislike_count?: number;
   user_like?: boolean | null;
