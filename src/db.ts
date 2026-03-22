@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import type { User, Picture, Tag, Like, Session, PictureUploadMetadata, GetPicturesFilters, CameraInfo, Album, AlbumRef } from "./types";
+import type { User, Picture, Tag, Like, Session, PictureUploadMetadata, GetPicturesFilters, CameraInfo, Album, AlbumRef, UserWithStats } from "./types";
 
 const dbPath = process.env.DATABASE_PATH || "./data/photos.db";
 const db = new Database(dbPath);
@@ -492,6 +492,28 @@ db.exec(`
 `);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_album_pictures_album_id ON album_pictures(album_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_album_pictures_picture_id ON album_pictures(picture_id)`);
+
+// User list function
+export function getUsersWithStats(): UserWithStats[] {
+  const stmt = db.prepare(`
+    SELECT
+      u.id,
+      u.name,
+      u.avatar_url,
+      COUNT(DISTINCT p.id) as photo_count,
+      COUNT(DISTINCT a.id) as album_count,
+      COUNT(DISTINCT CASE
+        WHEN p.camera_make IS NOT NULL OR p.camera_model IS NOT NULL
+        THEN COALESCE(p.camera_make, '') || '|' || COALESCE(p.camera_model, '')
+      END) as camera_count
+    FROM users u
+    LEFT JOIN pictures p ON u.id = p.user_id
+    LEFT JOIN albums a ON u.id = a.user_id
+    GROUP BY u.id, u.name, u.avatar_url
+    ORDER BY u.name ASC
+  `);
+  return stmt.all() as UserWithStats[];
+}
 
 // Album functions
 export function createAlbum(userId: number, title: string): Album {

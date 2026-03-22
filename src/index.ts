@@ -67,6 +67,7 @@ import {
   addPictureToAlbum,
   removePictureFromAlbum,
   getPictureAlbums,
+  getUsersWithStats,
 } from "./db";
 import {
   getValidToken,
@@ -746,6 +747,21 @@ const server = serve({
             return new Response("Unauthorized", { status: 401 });
           }
           return new Response("Failed to fetch tags", { status: 500 });
+        }
+      },
+    },
+
+    // List all users with stats (must come before /api/users/:id)
+    "/api/users": {
+      async GET(req) {
+        try {
+          requireAuth(req);
+          return Response.json(getUsersWithStats());
+        } catch (error) {
+          if (error instanceof Error && error.message === "Unauthorized") {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          return new Response("Failed to fetch users", { status: 500 });
         }
       },
     },

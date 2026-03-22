@@ -25,7 +25,7 @@ export function Header({ user, view, setView, onProfileClick }: HeaderProps) {
           <h1 className="text-2xl font-extralight tracking-widest text-slate-900">Frames</h1>
 
           <nav className="flex items-center gap-2">
-            {(["feed", "timeline", "upload", "import"] as View[]).map(v => (
+            {(["feed", "timeline", "upload", "import", "users"] as View[]).map(v => (
               <button
                 key={v}
                 onClick={() => setView(v)}

@@ -43,6 +43,15 @@ export interface Picture {
   focal_length: number | null;
 }
 
+export interface UserWithStats {
+  id: number;
+  name: string;
+  avatar_url: string | null;
+  photo_count: number;
+  album_count: number;
+  camera_count: number;
+}
+
 export interface AlbumRef {
   id: number;
   title: string;

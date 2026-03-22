@@ -7,14 +7,16 @@ import { UploadForm } from "./components/UploadForm";
 import { UserProfile } from "./components/UserProfile";
 import { GooglePhotosImport } from "./components/GooglePhotosImport";
 import { AlbumView } from "./components/AlbumView";
+import { UsersList } from "./components/UsersList";
 import type { User } from "./types";
 
-export type View = "feed" | "timeline" | "upload" | "profile" | "import" | "album";
+export type View = "feed" | "timeline" | "upload" | "profile" | "import" | "album" | "users";
 
 function parsePathToView(pathname: string): { view: View; profileUserId: number | null; albumId: number | null } {
   if (pathname === "/timeline") return { view: "timeline", profileUserId: null, albumId: null };
   if (pathname === "/upload") return { view: "upload", profileUserId: null, albumId: null };
   if (pathname === "/import") return { view: "import", profileUserId: null, albumId: null };
+  if (pathname === "/users") return { view: "users", profileUserId: null, albumId: null };
   const profileMatch = pathname.match(/^\/profile\/(\d+)$/);
   if (profileMatch) return { view: "profile", profileUserId: parseInt(profileMatch[1]), albumId: null };
   const albumMatch = pathname.match(/^\/albums\/(\d+)$/);
@@ -25,6 +27,7 @@ function parsePathToView(pathname: string): { view: View; profileUserId: number 
 function viewToPath(view: View, profileUserId?: number | null, albumId?: number | null): string {
   if (view === "profile" && profileUserId) return `/profile/${profileUserId}`;
   if (view === "album" && albumId) return `/albums/${albumId}`;
+  if (view === "users") return "/users";
   if (view === "feed") return "/feed";
   return `/${view}`;
 }
@@ -106,6 +109,7 @@ export function App() {
         {view === "profile" && profileUserId !== null && (
           <UserProfile userId={profileUserId} currentUser={user} onBack={() => navigate("feed")} onAlbumClick={handleAlbumClick} />
         )}
+        {view === "users" && <UsersList onUserClick={handleUserClick} />}
         {view === "album" && albumId !== null && (
           <AlbumView albumId={albumId} currentUser={user} onBack={() => navigate("feed")} onUserClick={handleUserClick} onAlbumClick={handleAlbumClick} />
         )}
