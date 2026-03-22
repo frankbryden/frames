@@ -30,10 +30,11 @@ export async function compressImage(fileBuffer: Buffer): Promise<CompressionResu
     exposureTime: null,
     iso: null,
     focalLength: null,
+    takenAt: null,
   };
   try {
     const exif = await exifr.parse(fileBuffer, {
-      pick: ["Make", "Model", "LensModel", "FNumber", "ExposureTime", "ISO", "FocalLength"],
+      pick: ["Make", "Model", "LensModel", "FNumber", "ExposureTime", "ISO", "FocalLength", "DateTimeOriginal", "DateTimeDigitized", "DateTime"],
     });
     if (exif) {
       cameraInfo.cameraMake = exif.Make ?? null;
@@ -46,6 +47,10 @@ export async function compressImage(fileBuffer: Buffer): Promise<CompressionResu
       }
       cameraInfo.iso = exif.ISO ?? null;
       cameraInfo.focalLength = exif.FocalLength ?? null;
+      const rawDate = exif.DateTimeOriginal ?? exif.DateTimeDigitized ?? exif.DateTime;
+      if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+        cameraInfo.takenAt = rawDate.toISOString();
+      }
     }
   } catch {
     // No EXIF or unreadable — leave all fields null

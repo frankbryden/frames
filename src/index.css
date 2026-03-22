@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+.font-album-title {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
 @layer base {
   * {
     box-sizing: border-box;

@@ -6,9 +6,10 @@ import type { User, Picture, Tag } from "../types";
 interface TimelineProps {
   user: User;
   onUserClick: (userId: number) => void;
+  onAlbumClick?: (albumId: number) => void;
 }
 
-export function Timeline({ user, onUserClick }: TimelineProps) {
+export function Timeline({ user, onUserClick, onAlbumClick }: TimelineProps) {
   const [pictures, setPictures] = useState<Picture[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -72,6 +73,7 @@ export function Timeline({ user, onUserClick }: TimelineProps) {
                     currentUser={user}
                     onUpdate={handleUpdate}
                     onUserClick={onUserClick}
+                    onAlbumClick={onAlbumClick}
                   />
                 </div>
               ))}

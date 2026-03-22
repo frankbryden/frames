@@ -5,9 +5,10 @@ import type { User, Picture } from "../types";
 interface UserFeedProps {
   user: User;
   onUserClick: (userId: number) => void;
+  onAlbumClick?: (albumId: number) => void;
 }
 
-export function UserFeed({ user, onUserClick }: UserFeedProps) {
+export function UserFeed({ user, onUserClick, onAlbumClick }: UserFeedProps) {
   const [pictures, setPictures] = useState<Picture[]>([]);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
@@ -49,6 +50,7 @@ export function UserFeed({ user, onUserClick }: UserFeedProps) {
                   currentUser={user}
                   onUpdate={() => loadPictures(true)}
                   onUserClick={onUserClick}
+                  onAlbumClick={onAlbumClick}
                 />
               </div>
             ))}

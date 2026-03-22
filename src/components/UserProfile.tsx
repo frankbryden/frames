@@ -1,27 +1,32 @@
 import React, { useState, useEffect } from "react";
-import type { User, CameraInfo } from "../types";
+import type { User, CameraInfo, Album } from "../types";
+import { AlbumGrid } from "./AlbumGrid";
 
 interface UserProfileProps {
   userId: number;
   currentUser: User;
   onBack: () => void;
+  onAlbumClick: (albumId: number) => void;
 }
 
-export function UserProfile({ userId, currentUser, onBack }: UserProfileProps) {
+export function UserProfile({ userId, currentUser, onBack, onAlbumClick }: UserProfileProps) {
   const [profileUser, setProfileUser] = useState<{ id: number; name: string; avatar_url: string | null } | null>(null);
   const [cameras, setCameras] = useState<CameraInfo[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        const [userRes, camerasRes] = await Promise.all([
+        const [userRes, camerasRes, albumsRes] = await Promise.all([
           fetch(`/api/users/${userId}`, { credentials: "include" }),
           fetch(`/api/users/${userId}/cameras`, { credentials: "include" }),
+          fetch(`/api/users/${userId}/albums`, { credentials: "include" }),
         ]);
         if (userRes.ok) setProfileUser(await userRes.json());
         if (camerasRes.ok) setCameras(await camerasRes.json());
+        if (albumsRes.ok) setAlbums(await albumsRes.json());
       } catch (err) {
         console.error("Failed to load profile:", err);
       } finally {
@@ -30,6 +35,23 @@ export function UserProfile({ userId, currentUser, onBack }: UserProfileProps) {
     };
     loadProfile();
   }, [userId]);
+
+  const handleCreateAlbum = async (title: string) => {
+    try {
+      const res = await fetch("/api/albums", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (res.ok) {
+        const album = await res.json();
+        setAlbums(prev => [album, ...prev]);
+      }
+    } catch (err) {
+      console.error("Failed to create album:", err);
+    }
+  };
 
   return (
     <div>
@@ -58,6 +80,18 @@ export function UserProfile({ userId, currentUser, onBack }: UserProfileProps) {
                 <p className="text-sm text-slate-400 font-light mt-1">Your profile</p>
               )}
             </div>
+          </div>
+
+          <div className="mb-10">
+            <h3 className="text-xs font-normal text-slate-400 uppercase tracking-widest mb-4">
+              Albums
+            </h3>
+            <AlbumGrid
+              albums={albums}
+              onAlbumClick={onAlbumClick}
+              isOwner={userId === currentUser.id}
+              onCreateAlbum={userId === currentUser.id ? handleCreateAlbum : undefined}
+            />
           </div>
 
           <div>

@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import type { Picture, User } from "../types";
+import React, { useState, useRef, useEffect } from "react";
+import type { Picture, User, AlbumRef } from "../types";
 import { TagInput } from "./TagInput";
+import { AlbumSelect } from "./AlbumSelect";
 import { FRAMES, getFrame } from "../frames";
 
 interface PictureCardProps {
@@ -15,6 +16,60 @@ interface PictureCardProps {
   currentUser: User;
   onUpdate?: () => void;
   onUserClick?: (userId: number) => void;
+  onAlbumClick?: (albumId: number) => void;
+  onSetCover?: (pictureId: number) => void;
+}
+
+function AlbumIconOverlay({ albums, onAlbumClick }: { albums: AlbumRef[]; onAlbumClick?: (albumId: number) => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (albums.length === 1) {
+      onAlbumClick?.(albums[0].id);
+    } else {
+      setMenuOpen(v => !v);
+    }
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={handleClick}
+        className="flex items-center text-slate-400 hover:text-slate-700 transition-colors"
+        title={albums.length === 1 ? albums[0].title : "In multiple albums"}
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+        </svg>
+      </button>
+      {menuOpen && albums.length > 1 && (
+        <div className="absolute right-0 bottom-full mb-1 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden">
+          {albums.map(album => (
+            <button
+              key={album.id}
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onAlbumClick?.(album.id); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 font-light transition-colors"
+            >
+              {album.title}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CameraTooltipContent({ picture }: { picture: PictureCardProps["picture"] }) {
@@ -52,7 +107,7 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: PictureCardProps) {
+export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlbumClick, onSetCover }: PictureCardProps) {
   const [showFullSize, setShowFullSize] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [localLikeCount, setLocalLikeCount] = useState(picture.like_count || 0);
@@ -62,6 +117,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
   const [editDescription, setEditDescription] = useState(picture.description || "");
   const [editTags, setEditTags] = useState((picture.tags || []).map(t => t.name));
   const [editFrame, setEditFrame] = useState(picture.frame || 'none');
+  const [editAlbums, setEditAlbums] = useState<AlbumRef[]>(picture.albums || []);
   const [saving, setSaving] = useState(false);
 
   const isOwner = picture.user_id === currentUser.id;
@@ -118,6 +174,28 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
         });
       }
 
+      const originalAlbums = (picture.albums || []).map(a => a.id);
+      const currentAlbums = editAlbums.map(a => a.id);
+      const albumsToAdd = editAlbums.filter(a => !originalAlbums.includes(a.id));
+      const albumsToRemove = (picture.albums || []).filter(a => !currentAlbums.includes(a.id));
+
+      await Promise.all([
+        ...albumsToAdd.map(a =>
+          fetch(`/api/albums/${a.id}/pictures`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pictureId: picture.id }),
+          })
+        ),
+        ...albumsToRemove.map(a =>
+          fetch(`/api/albums/${a.id}/pictures/${picture.id}`, {
+            method: "DELETE",
+            credentials: "include",
+          })
+        ),
+      ]);
+
       setEditing(false);
       if (onUpdate) onUpdate();
     } catch (error) {
@@ -131,6 +209,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
     setEditDescription(picture.description || "");
     setEditTags((picture.tags || []).map(t => t.name));
     setEditFrame(picture.frame || 'none');
+    setEditAlbums(picture.albums || []);
     setEditing(false);
   };
 
@@ -149,33 +228,32 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-slate-300 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-200">
-        <div className={`relative group ${frame.wrapperClass}`}>
+      <div className="bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-all shadow-sm hover:shadow-md duration-200">
+        <div className={`relative group overflow-hidden rounded-t-lg ${frame.wrapperClass}`}>
           <img
             src={picture.thumbnail_url || ""}
             alt={picture.description || "Photo"}
             className={`cursor-pointer hover:opacity-80 transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'} ${frame.imageClass}`}
-            onClick={() => setShowFullSize(true)}
+            onClick={() => {
+              setShowFullSize(true);
+              fetch(`/api/pictures/${picture.id}/view`, { method: "POST", credentials: "include" }).catch(() => {});
+            }}
             onLoad={() => setImageLoaded(true)}
             loading="lazy"
           />
-          {hasCameraInfo && (
-            <div className="absolute top-2 right-2">
-              <div className="relative">
-                <div className="p-1.5 bg-black/60 rounded-md text-slate-300 cursor-default">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="absolute right-0 top-8 w-56 p-3 bg-slate-900 border border-slate-700 rounded-lg shadow-xl text-xs font-light opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                  <CameraTooltipContent picture={picture} />
-                </div>
-              </div>
+          {onSetCover && (
+            <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => { e.stopPropagation(); onSetCover(picture.id); }}
+                className="px-2 py-1 bg-black/70 text-white text-xs rounded font-light hover:bg-black/90 transition-colors"
+              >
+                Set as cover
+              </button>
             </div>
           )}
         </div>
 
-        <div className="p-4">
+        <div className="p-4 border-t border-slate-200">
           <div className="flex items-center gap-2 mb-2">
             <button
               onClick={() => onUserClick?.(picture.user_id)}
@@ -183,9 +261,29 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
             >
               {picture.user_name || "Unknown"}
             </button>
-            <span className="text-xs text-slate-400 font-light">
-              {formatDate(picture.uploaded_at)}
+            <span
+              className="text-xs text-slate-400 font-light"
+              title={new Date(picture.taken_at ?? picture.uploaded_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            >
+              {formatDate(picture.taken_at ?? picture.uploaded_at)}
             </span>
+            <div className="ml-auto flex items-center gap-2">
+              {picture.albums && picture.albums.length > 0 && (
+                <AlbumIconOverlay albums={picture.albums} onAlbumClick={onAlbumClick} />
+              )}
+              {hasCameraInfo && (
+                <div className="relative group/camera">
+                  <div className="text-slate-400 cursor-default">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="absolute right-0 bottom-full mb-1 w-56 p-3 bg-slate-900 border border-slate-700 rounded-lg shadow-xl text-xs font-light opacity-0 group-hover/camera:opacity-100 pointer-events-none transition-opacity z-10">
+                    <CameraTooltipContent picture={picture} />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {editing ? (
@@ -214,6 +312,13 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
                     {f.label}
                   </button>
                 ))}
+              </div>
+              <div className="mb-3">
+                <AlbumSelect
+                  userId={currentUser.id}
+                  value={editAlbums}
+                  onChange={setEditAlbums}
+                />
               </div>
               <div className="flex gap-2">
                 <button
