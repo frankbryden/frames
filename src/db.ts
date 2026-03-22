@@ -56,6 +56,7 @@ const exifColumns = [
   "ALTER TABLE pictures ADD COLUMN iso INTEGER",
   "ALTER TABLE pictures ADD COLUMN focal_length REAL",
   "ALTER TABLE pictures ADD COLUMN frame TEXT DEFAULT 'none'",
+  "ALTER TABLE pictures ADD COLUMN taken_at DATETIME",
 ];
 for (const sql of exifColumns) {
   try { db.exec(sql); } catch { /* column already exists */ }
@@ -206,8 +207,9 @@ export function uploadPicture(metadata: PictureUploadMetadata): Picture {
       user_id, original_r2_key, compressed_r2_key, thumbnail_r2_key,
       original_filename, original_size, compressed_size, width, height,
       mime_type, description, frame,
-      camera_make, camera_model, lens_model, f_number, exposure_time, iso, focal_length
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      camera_make, camera_model, lens_model, f_number, exposure_time, iso, focal_length,
+      taken_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `);
 
@@ -231,6 +233,7 @@ export function uploadPicture(metadata: PictureUploadMetadata): Picture {
     metadata.exposureTime ?? null,
     metadata.iso ?? null,
     metadata.focalLength ?? null,
+    metadata.takenAt ?? null,
   ) as Picture;
 }
 

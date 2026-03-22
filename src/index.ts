@@ -302,6 +302,7 @@ const server = serve({
             exposureTime: metadata.cameraInfo.exposureTime,
             iso: metadata.cameraInfo.iso,
             focalLength: metadata.cameraInfo.focalLength,
+            takenAt: metadata.cameraInfo.takenAt,
           });
 
           // Add tags if provided
@@ -902,6 +903,7 @@ const server = serve({
               exposureTime,
               iso: metadata.cameraInfo.iso ?? photoMeta?.isoEquivalent ?? null,
               focalLength: metadata.cameraInfo.focalLength ?? photoMeta?.focalLength ?? null,
+              takenAt: metadata.cameraInfo.takenAt ?? (item.createTime ? new Date(item.createTime).toISOString() : null),
             });
 
             imported.push(picture.id);

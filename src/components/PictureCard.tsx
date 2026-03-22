@@ -185,9 +185,9 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick }: Pic
             </button>
             <span
               className="text-xs text-slate-400 font-light"
-              title={new Date(picture.uploaded_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              title={new Date(picture.taken_at ?? picture.uploaded_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             >
-              {formatDate(picture.uploaded_at)}
+              {formatDate(picture.taken_at ?? picture.uploaded_at)}
             </span>
           </div>
 

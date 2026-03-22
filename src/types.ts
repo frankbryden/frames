@@ -27,6 +27,7 @@ export interface Picture {
   description: string | null;
   frame?: string | null;
   uploaded_at: string;
+  taken_at: string | null;
   tags?: Tag[];
   like_count?: number;
   dislike_count?: number;
@@ -82,6 +83,7 @@ export interface PictureUploadMetadata {
   exposureTime?: string | null;
   iso?: number | null;
   focalLength?: number | null;
+  takenAt?: string | null;
 }
 
 export interface GetPicturesFilters {
@@ -115,6 +117,7 @@ export interface CompressionResult {
       exposureTime: string | null;
       iso: number | null;
       focalLength: number | null;
+      takenAt: string | null;
     };
   };
 }
