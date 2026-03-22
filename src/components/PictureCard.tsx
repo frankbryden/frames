@@ -17,7 +17,7 @@ interface PictureCardProps {
   onUpdate?: () => void;
   onUserClick?: (userId: number) => void;
   onAlbumClick?: (albumId: number) => void;
-  onSetCover?: (pictureId: number) => void;
+  onSetCover?: (pictureId: number) => Promise<boolean>;
 }
 
 function AlbumIconOverlay({ albums, onAlbumClick }: { albums: AlbumRef[]; onAlbumClick?: (albumId: number) => void }) {
@@ -119,6 +119,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
   const [editFrame, setEditFrame] = useState(picture.frame || 'none');
   const [editAlbums, setEditAlbums] = useState<AlbumRef[]>(picture.albums || []);
   const [saving, setSaving] = useState(false);
+  const [coverStatus, setCoverStatus] = useState<"idle" | "ok" | "err">("idle");
 
   const isOwner = picture.user_id === currentUser.id;
   const hasCameraInfo = !!(picture.camera_make || picture.camera_model);
@@ -244,10 +245,15 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
           {onSetCover && (
             <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                onClick={(e) => { e.stopPropagation(); onSetCover(picture.id); }}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const ok = await onSetCover(picture.id);
+                  setCoverStatus(ok ? "ok" : "err");
+                  setTimeout(() => setCoverStatus("idle"), 2000);
+                }}
                 className="px-2 py-1 bg-black/70 text-white text-xs rounded font-light hover:bg-black/90 transition-colors"
               >
-                Set as cover
+                {coverStatus === "ok" ? "✓" : coverStatus === "err" ? "✕" : "Set as cover"}
               </button>
             </div>
           )}
