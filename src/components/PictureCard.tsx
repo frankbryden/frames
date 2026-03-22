@@ -48,7 +48,7 @@ function AlbumIconOverlay({ albums, onAlbumClick }: { albums: AlbumRef[]; onAlbu
     <div ref={ref} className="relative">
       <button
         onClick={handleClick}
-        className="p-1.5 bg-black/60 rounded-md text-slate-300 hover:text-white transition-colors"
+        className="flex items-center text-slate-400 hover:text-slate-700 transition-colors"
         title={albums.length === 1 ? albums[0].title : "In multiple albums"}
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -56,7 +56,7 @@ function AlbumIconOverlay({ albums, onAlbumClick }: { albums: AlbumRef[]; onAlbu
         </svg>
       </button>
       {menuOpen && albums.length > 1 && (
-        <div className="absolute right-0 bottom-8 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden">
+        <div className="absolute right-0 bottom-full mb-1 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden">
           {albums.map(album => (
             <button
               key={album.id}
@@ -228,8 +228,8 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-slate-300 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-200">
-        <div className={`relative group ${frame.wrapperClass}`}>
+      <div className="bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-all shadow-sm hover:shadow-md duration-200">
+        <div className={`relative group overflow-hidden rounded-t-lg ${frame.wrapperClass}`}>
           <img
             src={picture.thumbnail_url || ""}
             alt={picture.description || "Photo"}
@@ -238,23 +238,6 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
             onLoad={() => setImageLoaded(true)}
             loading="lazy"
           />
-          <div className="absolute top-2 right-2 flex items-center gap-1">
-            {picture.albums && picture.albums.length > 0 && (
-              <AlbumIconOverlay albums={picture.albums} onAlbumClick={onAlbumClick} />
-            )}
-            {hasCameraInfo && (
-              <div className="relative">
-                <div className="p-1.5 bg-black/60 rounded-md text-slate-300 cursor-default">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="absolute right-0 top-8 w-56 p-3 bg-slate-900 border border-slate-700 rounded-lg shadow-xl text-xs font-light opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                  <CameraTooltipContent picture={picture} />
-                </div>
-              </div>
-            )}
-          </div>
           {onSetCover && (
             <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
@@ -267,7 +250,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
           )}
         </div>
 
-        <div className="p-4">
+        <div className="p-4 border-t border-slate-200">
           <div className="flex items-center gap-2 mb-2">
             <button
               onClick={() => onUserClick?.(picture.user_id)}
@@ -281,6 +264,23 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
             >
               {formatDate(picture.taken_at ?? picture.uploaded_at)}
             </span>
+            <div className="ml-auto flex items-center gap-2">
+              {picture.albums && picture.albums.length > 0 && (
+                <AlbumIconOverlay albums={picture.albums} onAlbumClick={onAlbumClick} />
+              )}
+              {hasCameraInfo && (
+                <div className="relative group/camera">
+                  <div className="text-slate-400 cursor-default">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="absolute right-0 bottom-full mb-1 w-56 p-3 bg-slate-900 border border-slate-700 rounded-lg shadow-xl text-xs font-light opacity-0 group-hover/camera:opacity-100 pointer-events-none transition-opacity z-10">
+                    <CameraTooltipContent picture={picture} />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {editing ? (
