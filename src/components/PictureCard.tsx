@@ -117,6 +117,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
   const [editDescription, setEditDescription] = useState(picture.description || "");
   const [editTags, setEditTags] = useState((picture.tags || []).map(t => t.name));
   const [editFrame, setEditFrame] = useState(picture.frame || 'none');
+  const [editRotation, setEditRotation] = useState(picture.rotation || 0);
   const [editAlbums, setEditAlbums] = useState<AlbumRef[]>(picture.albums || []);
   const [saving, setSaving] = useState(false);
   const [coverStatus, setCoverStatus] = useState<"idle" | "ok" | "err">("idle");
@@ -151,7 +152,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: editDescription, frame: editFrame }),
+        body: JSON.stringify({ description: editDescription, frame: editFrame, rotation: editRotation }),
       });
 
       const originalTags = (picture.tags || []).map(t => t.name);
@@ -210,6 +211,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
     setEditDescription(picture.description || "");
     setEditTags((picture.tags || []).map(t => t.name));
     setEditFrame(picture.frame || 'none');
+    setEditRotation(picture.rotation || 0);
     setEditAlbums(picture.albums || []);
     setEditing(false);
   };
@@ -235,6 +237,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
             src={picture.thumbnail_url || ""}
             alt={picture.description || "Photo"}
             className={`cursor-pointer hover:opacity-80 transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'} ${frame.imageClass}`}
+            style={{ transform: `rotate(${editing ? editRotation : (picture.rotation || 0)}deg)` }}
             onClick={() => {
               setShowFullSize(true);
               fetch(`/api/pictures/${picture.id}/view`, { method: "POST", credentials: "include" }).catch(() => {});
@@ -318,6 +321,24 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
                     {f.label}
                   </button>
                 ))}
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-slate-400 font-light">Rotate:</span>
+                <button
+                  onClick={() => setEditRotation(r => (r - 90 + 360) % 360)}
+                  className="px-2 py-1 text-xs rounded border border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700 font-light transition-colors"
+                  title="Rotate left 90°"
+                >
+                  ↺
+                </button>
+                <button
+                  onClick={() => setEditRotation(r => (r + 90) % 360)}
+                  className="px-2 py-1 text-xs rounded border border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700 font-light transition-colors"
+                  title="Rotate right 90°"
+                >
+                  ↻
+                </button>
+                <span className="text-xs text-slate-400 font-light">{editRotation}°</span>
               </div>
               <div className="mb-3">
                 <AlbumSelect
@@ -419,6 +440,7 @@ export function PictureCard({ picture, currentUser, onUpdate, onUserClick, onAlb
               src={picture.compressed_url || ""}
               alt={picture.description || "Photo"}
               className="max-h-[70vh] max-w-[80vw] object-contain block"
+              style={{ transform: `rotate(${picture.rotation || 0}deg)` }}
             />
           </div>
           <button

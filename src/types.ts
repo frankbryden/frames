@@ -26,6 +26,7 @@ export interface Picture {
   mime_type: string;
   description: string | null;
   frame?: string | null;
+  rotation?: number;
   uploaded_at: string;
   taken_at: string | null;
   tags?: Tag[];

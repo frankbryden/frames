@@ -65,6 +65,9 @@ for (const sql of exifColumns) {
 // View count migration — idempotent
 try { db.exec("ALTER TABLE pictures ADD COLUMN view_count INTEGER DEFAULT 0"); } catch { /* column already exists */ }
 
+// Rotation migration — idempotent
+try { db.exec("ALTER TABLE pictures ADD COLUMN rotation INTEGER DEFAULT 0"); } catch { /* column already exists */ }
+
 // Google Photos token migration — idempotent
 const tokenColumns = [
   "ALTER TABLE users ADD COLUMN google_access_token TEXT",
@@ -345,6 +348,10 @@ export function updatePictureDescription(pictureId: number, description: string)
 
 export function updatePictureFrame(pictureId: number, frame: string): void {
   db.prepare("UPDATE pictures SET frame = ? WHERE id = ?").run(frame, pictureId);
+}
+
+export function updatePictureRotation(pictureId: number, rotation: number): void {
+  db.prepare("UPDATE pictures SET rotation = ? WHERE id = ?").run(rotation, pictureId);
 }
 
 export function deletePicture(pictureId: number): Picture | null {

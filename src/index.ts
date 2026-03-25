@@ -45,6 +45,7 @@ import {
   getTimeline,
   updatePictureDescription,
   updatePictureFrame,
+  updatePictureRotation,
   deletePicture,
   addTags,
   removeTags,
@@ -464,7 +465,7 @@ const server = serve({
           }
 
           const body = await req.json();
-          const { description, frame } = body;
+          const { description, frame, rotation } = body;
           const VALID_FRAMES = ['none', 'white', 'polaroid', 'dark', 'film'];
 
           if (typeof description === "string") {
@@ -473,6 +474,10 @@ const server = serve({
 
           if (typeof frame === "string" && VALID_FRAMES.includes(frame)) {
             updatePictureFrame(pictureId, frame);
+          }
+
+          if (typeof rotation === "number" && [0, 90, 180, 270].includes(rotation)) {
+            updatePictureRotation(pictureId, rotation);
           }
 
           return Response.json({ success: true });
